@@ -1,0 +1,134 @@
+# PaperCarator 默认配置
+
+# 系统设置
+system:
+  name: "PaperCarator"
+  version: "0.1.0"
+  log_level: "INFO"
+  output_dir: "./output"
+  temp_dir: "./temp"
+
+# 题目分析模块
+planner:
+  enabled: true
+  # 分析深度: basic | standard | deep
+  analysis_depth: "standard"
+  # 最大分析迭代次数
+  max_iterations: 3
+  # 输出格式
+  output_format: "json"
+
+# 数学建模模块
+math_modeling:
+  enabled: true
+  # 求解器设置
+  solver:
+    # 默认求解器: scipy | sympy | pyomo | cvxpy
+    default: "scipy"
+    timeout: 300
+  # 模型验证
+  validation:
+    enabled: true
+    tolerance: 1e-6
+  # 可视化
+  visualization:
+    enabled: true
+    format: "png"
+    dpi: 300
+
+# MATLAB桥接配置
+matlab:
+  enabled: true
+  path: "C:\\Program Files\\MATLAB\\R2024b\\bin\\matlab.exe"
+  use_engine: true
+  timeout: 300
+
+# SolidWorks桥接配置
+solidworks:
+  enabled: true
+  visible: false
+  output_formats:
+    - "sldprt"
+    - "step"
+    - "stl"
+    - "png"
+
+# VS Code集成配置
+vscode:
+  enabled: true
+  path: "C:\\Users\\24560\\AppData\\Local\\Programs\\Microsoft VS Code\\code.exe"
+  auto_open_tex: true
+  auto_open_pdf: true
+
+# 3D建模与可视化模块
+visualization:
+  enabled: true
+  # 3D引擎: blender | trimesh | matplotlib | solidworks
+  engine: "trimesh"
+  # 渲染设置
+  render:
+    width: 1920
+    height: 1080
+    samples: 128
+  # 输出格式
+  output_format: "png"
+
+# 论文写作模块
+paper_writer:
+  enabled: true
+  # 论文模板
+  template: "ieee"
+  # 支持的模板: ieee | acm | springer | custom
+  templates_dir: "./papercarator/paper_writer/templates"
+  # LaTeX编译器
+  latex_compiler: "xelatex"
+  # 编译次数
+  compile_iterations: 3
+  # 自动摘要
+  auto_abstract: true
+  # 自动关键词
+  auto_keywords: true
+  # 语言设置
+  language: "zh"
+
+# GitHub发布模块
+github_publisher:
+  enabled: true
+  # 仓库设置
+  repo:
+    owner: ""
+    name: ""
+    private: false
+  # 发布设置
+  publish:
+    create_release: true
+    include_pdf: true
+    include_source: true
+  # README生成
+  auto_readme: true
+
+# LLM设置 (用于文本生成)
+llm:
+  # 提供商: openai | anthropic | local
+  provider: "anthropic"
+  model: "claude-3-sonnet-20240229"
+  temperature: 0.3
+  max_tokens: 4096
+  # API密钥 (建议通过环境变量设置)
+  api_key: ""
+
+# 论文结构设置
+paper_structure:
+  sections:
+    - "abstract"
+    - "introduction"
+    - "related_work"
+    - "methodology"
+    - "experiments"
+    - "results"
+    - "conclusion"
+    - "references"
+  # 每节最小字数
+  min_words_per_section: 500
+  # 每节最大字数
+  max_words_per_section: 2000

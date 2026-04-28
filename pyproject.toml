@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "papercarator"
+version = "0.2.0"
+description = "全自动论文创作系统 - 从题目到成稿的端到端自动化"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "PaperCarator Team"}
+]
+keywords = ["paper", "automation", "latex", "modeling", "academic"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "click>=8.0",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "pyyaml>=6.0",
+    "jinja2>=3.0",
+    "sympy>=1.12",
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+    "loguru>=0.7",
+    "rich>=13.0",
+    "httpx>=0.25",
+    "gitpython>=3.1",
+    "pylatex>=1.4",
+    "trimesh>=4.0",
+    "networkx>=3.0",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
+    "pre-commit>=3.0",
+]
+blender = [
+    "bpy>=4.0",
+]
+matlab = [
+    "pywin32>=306; platform_system=='Windows'",
+]
+solidworks = [
+    "pywin32>=306; platform_system=='Windows'",
+]
+windows = [
+    "pywin32>=306",
+]
+all = [
+    "papercarator[dev,blender,matlab,solidworks]"
+]
+
+[project.scripts]
+papercarator = "papercarator.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/papercarator/papercarator"
+Repository = "https://github.com/papercarator/papercarator"
+Issues = "https://github.com/papercarator/papercarator/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["papercarator*"]
+
+[tool.black]
+line-length = 100
+target-version = ['py310']
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

@@ -1,0 +1,31 @@
+system:
+  output_dir: ./skill_output
+  temp_dir: ./temp
+
+planner:
+  analysis_depth: standard
+
+math_modeling:
+  enabled: true
+
+visualization:
+  enabled: true
+  engine: trimesh
+
+paper_writer:
+  enabled: true
+  template: custom
+  latex_compiler: xelatex
+  language: zh
+
+github_publisher:
+  enabled: false
+
+matlab:
+  enabled: false
+
+solidworks:
+  enabled: false
+
+vscode:
+  enabled: false
