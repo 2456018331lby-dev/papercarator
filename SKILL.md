@@ -1,59 +1,58 @@
 ---
 name: papercarator
 description: >
-  Math-modeling paper generator. From topic to PDF in one command.
-  Use when user wants to generate an academic paper with mathematical modeling,
-  equations, solver results, charts, algorithm pseudocode, and LaTeX/PDF output.
-  Supports 16 model types: optimization, equations, ODE/PDE, queueing, Markov,
-  Bayesian, statistics, network flow, graph theory, time-series, game theory,
-  control theory, clustering, multi-objective, fuzzy logic.
-  NOT for: literature-review-only, open-domain research, industrial CAD.
+  Math-modeling paper generator. You (the AI) write the paper, scripts handle math and formatting.
+  Use when user wants to generate an academic paper with mathematical modeling.
+  Supports 16 model types. NOT for: literature-review-only, open-domain research, industrial CAD.
 ---
 
-# PaperCarator — One-Command Paper Generation
+# PaperCarator — AI-Written Paper Generation
 
-## Usage (copy-paste for Claude Code / Hermes)
+## How It Works (3 Steps)
 
+### Step 1: Generate modeling data (you run this)
 ```bash
-cd /path/to/papercarator && python3.12 scripts/run_paper.py "YOUR_TOPIC_HERE"
+cd <papercarator-dir> && python3 scripts/generate_data.py "TOPIC" --output <dir>
 ```
+This outputs JSON with: model type, equations, solution values, statistics, charts, algorithm pseudocode, and real literature from Semantic Scholar.
 
-That's it. The script handles everything: analysis → modeling → solving → charts → pseudocode → academic enhancement → LaTeX → PDF → quality report.
+### Step 2: YOU write the paper (you do this)
+Read the JSON from Step 1. Write each section as LaTeX content. Use the actual numbers from the solution. Cite the literature from the JSON. Write with depth — real analysis, not templates.
 
-## Options
-
-```bash
-# Default: output to ./output/<topic>/
-python3.12 scripts/run_paper.py "基于排队论的医院门诊流程优化研究"
-
-# Custom output directory
-python3.12 scripts/run_paper.py "基于贝叶斯推断的药物疗效评估" --output /path/to/dir
-
-# Specific template (standard/ieee/acm/cjm)
-python3.12 scripts/run_paper.py "基于PID控制的自动驾驶" --template ieee
-
-# Check existing output quality
-python3.12 scripts/quick_check.py /path/to/output/dir
-```
-
-## What You Get
-
-After running, the script prints a JSON summary:
-
+Save your written sections as a JSON file:
 ```json
 {
-  "topic": "...",
-  "model_type": "queueing",
-  "keywords": ["排队", "服务台", "优化"],
-  "quality_score": 77.4,
-  "pdf": "/path/to/paper.pdf",
-  "charts": ["queue_curve.png", "queue_metrics.png"],
-  "has_algorithm": true,
-  "suggestions": ["math_rigor 维度得分较低 (52)"]
+  "abstract": "...",
+  "introduction": "...",
+  "related_work": "...",
+  "methodology": "...",
+  "experiments": "...",
+  "results": "...",
+  "conclusion": "...",
+  "references": "\\bibitem{ref1} Author. Title. Journal, 2024."
 }
 ```
 
-If PDF compilation fails (no xelatex), the .tex file is still generated and valid.
+### Step 3: Assemble into PDF (you run this)
+```bash
+python3 scripts/assemble_paper.py --context <context.json> --sections <sections.json> --template custom
+```
+
+## Quick Alternative (one command, uses external LLM)
+```bash
+python3 scripts/run_paper.py "TOPIC" --output <dir>
+```
+This calls MiniMax-M2.7 via API to write sections automatically. Set HIAPI_API_KEY in env.
+
+## Writing Guidelines for Step 2
+
+- Use actual numbers: "系统利用率 ρ=0.7031" not "求解成功"
+- Cite real literature from the JSON's `literature` field
+- Each section should be substantive (300-800 words)
+- Include LaTeX math formulas for key equations
+- Related work: categorize by method, discuss pros/cons
+- Results: interpret what the numbers mean physically
+- Use `\cite{ref1}` for citations, `\bibitem{ref1}` in references section
 
 ## Supported Models (16)
 
@@ -61,8 +60,6 @@ equation_system | optimization | multi_objective | differential | pde |
 queueing | markov_chain | bayesian | statistical | network_flow |
 time_series | game_theory | control_theory | clustering | graph_theory | fuzzy_logic
 
-## Troubleshooting
+## Templates
 
-- **No xelatex**: Install MiKTeX or TeX Live. Script auto-detects Windows MiKTeX in WSL.
-- **Missing deps**: `pip install -e ".[dev]"` in the papercarator directory.
-- **Low quality score**: Run `python3.12 scripts/quick_check.py <dir>` for details.
+custom (default) | ieee | acm | cjm | springer_lncs | thesis
