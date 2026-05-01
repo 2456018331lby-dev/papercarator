@@ -1,58 +1,62 @@
 ---
 name: papercarator
 description: >
-  Math-modeling paper generator. You (the AI) write the paper, scripts handle math and formatting.
-  Use when user wants to generate an academic paper with mathematical modeling.
-  Supports 16 model types. NOT for: literature-review-only, open-domain research, industrial CAD.
+  Math-modeling paper generator. Two modes: (A) YOU write the paper using math data from scripts, or (B) one-command auto via external LLM. Use when user wants a math-modeling paper with equations, charts, and PDF. Supports 16 model types.
 ---
 
-# PaperCarator — AI-Written Paper Generation
+# PaperCarator Skill
 
-## How It Works (3 Steps)
+## Decision: Which Mode?
 
-### Step 1: Generate modeling data (you run this)
+**Mode A — You (the AI) write the paper** (default, recommended):
+Use when: user wants a quality paper, you have context budget, user doesn't mind a few steps.
+Benefit: YOU write with your own intelligence. Better quality, no external API cost.
+
+**Mode B — One-command auto** (fallback):
+Use when: user wants it fast, or you don't have context to write 6 sections.
+Requirement: HIAPI_API_KEY or OPENAI_API_KEY in environment.
+
+## Mode A: YOU Write (3 Steps)
+
+**Step 1** — Run this command to get modeling data:
 ```bash
-cd <papercarator-dir> && python3 scripts/generate_data.py "TOPIC" --output <dir>
+cd <papercarator-dir> && python3 scripts/generate_data.py "TOPIC" --output <output-dir>
 ```
-This outputs JSON with: model type, equations, solution values, statistics, charts, algorithm pseudocode, and real literature from Semantic Scholar.
+Save the JSON output. It contains: model type, equations, solution values, statistics, chart paths, algorithm pseudocode, and real literature.
 
-### Step 2: YOU write the paper (you do this)
-Read the JSON from Step 1. Write each section as LaTeX content. Use the actual numbers from the solution. Cite the literature from the JSON. Write with depth — real analysis, not templates.
-
-Save your written sections as a JSON file:
+**Step 2** — Write each section as LaTeX. Create a JSON file with this structure:
 ```json
 {
-  "abstract": "...",
-  "introduction": "...",
-  "related_work": "...",
-  "methodology": "...",
-  "experiments": "...",
-  "results": "...",
-  "conclusion": "...",
-  "references": "\\bibitem{ref1} Author. Title. Journal, 2024."
+  "abstract": "Your abstract here with actual numbers from the solution...",
+  "introduction": "Your introduction with research background...",
+  "related_work": "Your literature review citing papers from the JSON...",
+  "methodology": "Your method description with LaTeX equations...",
+  "experiments": "Your experimental setup...",
+  "results": "Your analysis with specific numbers from solution.values...",
+  "conclusion": "Your conclusions...",
+  "references": "\\bibitem{ref1} Author. Title. Journal, Year."
 }
 ```
 
-### Step 3: Assemble into PDF (you run this)
-```bash
-python3 scripts/assemble_paper.py --context <context.json> --sections <sections.json> --template custom
-```
-
-## Quick Alternative (one command, uses external LLM)
-```bash
-python3 scripts/run_paper.py "TOPIC" --output <dir>
-```
-This calls MiniMax-M2.7 via API to write sections automatically. Set HIAPI_API_KEY in env.
-
-## Writing Guidelines for Step 2
-
-- Use actual numbers: "系统利用率 ρ=0.7031" not "求解成功"
-- Cite real literature from the JSON's `literature` field
-- Each section should be substantive (300-800 words)
-- Include LaTeX math formulas for key equations
+Writing rules:
+- Use REAL numbers from `solution.values` (e.g., "ρ=0.7031" not "求解成功")
+- Cite literature from the JSON's `literature` field
+- Each section: 200-600 words, substantive analysis
+- Include LaTeX math: inline `$...$`, display `$$...$$`
 - Related work: categorize by method, discuss pros/cons
-- Results: interpret what the numbers mean physically
-- Use `\cite{ref1}` for citations, `\bibitem{ref1}` in references section
+- Results: interpret what numbers mean physically
+
+**Step 3** — Assemble into PDF:
+```bash
+python3 scripts/assemble_paper.py --context <context.json> --sections <your-sections.json> --template custom
+```
+
+## Mode B: One Command
+
+```bash
+cd <papercarator-dir> && python3 scripts/run_paper.py "TOPIC" --output <dir>
+```
+Optional: `--data data.csv` for real data, `--template ieee` for IEEE format.
 
 ## Supported Models (16)
 
@@ -62,4 +66,4 @@ time_series | game_theory | control_theory | clustering | graph_theory | fuzzy_l
 
 ## Templates
 
-custom (default) | ieee | acm | cjm | springer_lncs | thesis
+custom | ieee | acm | cjm | springer_lncs | thesis
