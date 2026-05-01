@@ -1,6 +1,6 @@
 """论文模板系统。
 
-支持多种学术论文模板：标准article、IEEE、ACM、中文期刊等。
+支持多种学术论文模板：标准article、IEEE、ACM、中文期刊、Springer LNCS、中文学位论文。
 """
 
 from loguru import logger
@@ -12,92 +12,27 @@ class PaperTemplate:
     TEMPLATES = {
         "standard": {
             "name": "标准学术论文",
-            "preamble": (
-                "\\documentclass[a4paper,12pt]{article}\n"
-                "\\usepackage{ctex}\n"
-                "\\usepackage{amsmath}\n"
-                "\\usepackage{amssymb}\n"
-                "\\usepackage{graphicx}\n"
-                "\\usepackage{booktabs}\n"
-                "\\usepackage{geometry}\n"
-                "\\usepackage{hyperref}\n"
-                "\\usepackage{xcolor}\n"
-                "\\usepackage{float}\n"
-                "\\usepackage{algorithm}\n"
-                "\\usepackage{algorithmic}\n"
-                "\\usepackage{listings}\n"
-                "\\usepackage{subcaption}\n"
-                "\\usepackage{multirow}\n"
-                "\\usepackage{longtable}\n"
-                "\\geometry{margin=2.5cm}\n"
-                "\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n"
-            ),
+            "preamble": "\\documentclass[a4paper,12pt]{article}\n\\usepackage{ctex}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{booktabs}\n\\usepackage{geometry}\n\\usepackage{hyperref}\n\\usepackage{xcolor}\n\\usepackage{float}\n\\usepackage{algorithm}\n\\usepackage{algorithmic}\n\\usepackage{listings}\n\\usepackage{subcaption}\n\\usepackage{multirow}\n\\usepackage{longtable}\n\\geometry{margin=2.5cm}\n\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n",
         },
         "ieee": {
             "name": "IEEE双栏论文",
-            "preamble": (
-                "\\documentclass[conference]{IEEEtran}\n"
-                "\\usepackage{ctex}\n"
-                "\\usepackage{amsmath}\n"
-                "\\usepackage{amssymb}\n"
-                "\\usepackage{graphicx}\n"
-                "\\usepackage{booktabs}\n"
-                "\\usepackage{hyperref}\n"
-                "\\usepackage{xcolor}\n"
-                "\\usepackage{float}\n"
-                "\\usepackage{algorithm}\n"
-                "\\usepackage{algorithmic}\n"
-                "\\usepackage{cite}\n"
-                "\\usepackage{listings}\n"
-                "\\usepackage{subcaption}\n"
-                "\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n"
-            ),
+            "preamble": "\\documentclass[conference]{IEEEtran}\n\\usepackage{ctex}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{booktabs}\n\\usepackage{hyperref}\n\\usepackage{xcolor}\n\\usepackage{float}\n\\usepackage{algorithm}\n\\usepackage{algorithmic}\n\\usepackage{cite}\n\\usepackage{listings}\n\\usepackage{subcaption}\n\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n",
         },
         "acm": {
             "name": "ACM会议论文",
-            "preamble": (
-                "\\documentclass[sigconf]{acmart}\n"
-                "\\usepackage{ctex}\n"
-                "\\usepackage{amsmath}\n"
-                "\\usepackage{amssymb}\n"
-                "\\usepackage{graphicx}\n"
-                "\\usepackage{booktabs}\n"
-                "\\usepackage{hyperref}\n"
-                "\\usepackage{xcolor}\n"
-                "\\usepackage{float}\n"
-                "\\usepackage{algorithm}\n"
-                "\\usepackage{algorithmic}\n"
-                "\\usepackage{listings}\n"
-                "\\usepackage{subcaption}\n"
-            ),
+            "preamble": "\\documentclass[sigconf]{acmart}\n\\usepackage{ctex}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{booktabs}\n\\usepackage{hyperref}\n\\usepackage{xcolor}\n\\usepackage{float}\n\\usepackage{algorithm}\n\\usepackage{algorithmic}\n\\usepackage{listings}\n\\usepackage{subcaption}\n",
         },
         "cjm": {
             "name": "中文期刊论文",
-            "preamble": (
-                "\\documentclass[a4paper,11pt]{article}\n"
-                "\\usepackage{ctex}\n"
-                "\\usepackage{amsmath}\n"
-                "\\usepackage{amssymb}\n"
-                "\\usepackage{graphicx}\n"
-                "\\usepackage{booktabs}\n"
-                "\\usepackage{geometry}\n"
-                "\\usepackage{hyperref}\n"
-                "\\usepackage{xcolor}\n"
-                "\\usepackage{float}\n"
-                "\\usepackage{algorithm}\n"
-                "\\usepackage{algorithmic}\n"
-                "\\usepackage{fancyhdr}\n"
-                "\\usepackage{abstract}\n"
-                "\\usepackage{listings}\n"
-                "\\usepackage{subcaption}\n"
-                "\\usepackage{multirow}\n"
-                "\\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}\n"
-                "\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n"
-                "\\pagestyle{fancy}\n"
-                "\\fancyhf{}\n"
-                "\\fancyhead[C]{\\small\\leftmark}\n"
-                "\\fancyfoot[C]{\\thepage}\n"
-            ),
+            "preamble": "\\documentclass[a4paper,11pt]{article}\n\\usepackage{ctex}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{booktabs}\n\\usepackage{geometry}\n\\usepackage{hyperref}\n\\usepackage{xcolor}\n\\usepackage{float}\n\\usepackage{algorithm}\n\\usepackage{algorithmic}\n\\usepackage{fancyhdr}\n\\usepackage{listings}\n\\usepackage{subcaption}\n\\usepackage{multirow}\n\\geometry{left=2.5cm, right=2.5cm, top=2.5cm, bottom=2.5cm}\n\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyfoot[C]{\\thepage}\n",
+        },
+        "springer_lncs": {
+            "name": "Springer LNCS",
+            "preamble": "\\documentclass[runningheads]{llncs}\n\\usepackage{ctex}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{booktabs}\n\\usepackage{hyperref}\n\\usepackage{xcolor}\n\\usepackage{float}\n\\usepackage{algorithm}\n\\usepackage{algorithmic}\n\\usepackage{listings}\n\\usepackage{subcaption}\n",
+        },
+        "thesis": {
+            "name": "中文学位论文",
+            "preamble": "\\documentclass[a4paper,12pt]{ctexbook}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{graphicx}\n\\usepackage{booktabs}\n\\usepackage{geometry}\n\\usepackage{hyperref}\n\\usepackage{xcolor}\n\\usepackage{float}\n\\usepackage{algorithm}\n\\usepackage{algorithmic}\n\\usepackage{fancyhdr}\n\\usepackage{listings}\n\\usepackage{subcaption}\n\\usepackage{multirow}\n\\usepackage{longtable}\n\\geometry{left=3cm, right=2.5cm, top=2.5cm, bottom=2.5cm}\n\\hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyfoot[C]{\\thepage}\n",
         },
     }
 

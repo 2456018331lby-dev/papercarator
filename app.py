@@ -1,244 +1,165 @@
-"""PaperCarator Web UI - Gradio交互界面
+"""PaperCarator Web UI - Gradio交互界面。
 
-一键生成学术论文的Web界面。
+Usage:
+    python app.py
+    # 访问 http://localhost:7860
 """
 
-import tempfile
+import json
+import sys
 from pathlib import Path
 
-import gradio as gr
+sys.path.insert(0, str(Path(__file__).parent))
 
-from papercarator.planner import TopicAnalyzer
-from papercarator.math_modeling import ModelBuilder, ModelSolver, ModelValidator
-from papercarator.paper_writer import LaTeXGenerator, SectionWriter
-from papercarator.visualization import ChartGenerator
+try:
+    import gradio as gr
+except ImportError:
+    print("需要安装gradio: pip install gradio")
+    sys.exit(1)
+
+from scripts.run_paper import run
 
 
-def generate_paper(topic: str, progress=gr.Progress()):
-    """生成完整论文
+def generate_paper(topic, template, output_dir):
+    """Gradio回调：生成论文。"""
+    if not topic.strip():
+        return "请输入题目", None, None
 
-    Args:
-        topic: 论文题目
-        progress: Gradio进度条
-
-    Returns:
-        各章节内容、PDF文件路径、状态信息
-    """
-    if not topic or len(topic.strip()) < 5:
-        return "请输入有效的论文题目（至少5个字符）", None, None, None, None, None, None, None, "错误：题目太短"
+    output_dir = output_dir.strip() or None
 
     try:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            output_dir = Path(tmpdir)
+        result = run(topic, output_dir, template)
 
-            # Step 1: 题目分析
-            progress(0.1, desc="正在分析题目...")
-            analyzer = TopicAnalyzer()
-            plan = analyzer.analyze(topic)
+        if not result.get("success"):
+            return f"生成失败: {result.get('error')}", None, None
 
-            # Step 2: 数学建模
-            progress(0.25, desc="正在构建数学模型...")
-            builder = ModelBuilder()
-            solver = ModelSolver()
-            validator = ModelValidator()
+        # Format summary
+        summary_lines = [
+            f"=== 论文生成完成 ===",
+            f"题目: {result['topic']}",
+            f"模型类型: {result['model_type']}",
+            f"关键词: {', '.join(result['keywords'])}",
+            f"难度: {result['difficulty']}",
+            f"质量评分: {result['quality_score']}/100",
+            f"求解状态: {'成功' if result['solution_success'] else '失败'}",
+            f"求解信息: {result['solution_message']}",
+            f"图表数量: {result['chart_count']}",
+            f"算法伪代码: {'是' if result['has_algorithm'] else '否'}",
+            f"耗时: {result['elapsed_seconds']}秒",
+            f"输出目录: {result['output_dir']}",
+        ]
+        if result.get("suggestions"):
+            summary_lines.append("")
+            summary_lines.append("改进建议:")
+            for s in result["suggestions"]:
+                summary_lines.append(f"  - {s}")
 
-            model = builder.build(topic, plan)
-            solution = solver.solve(model)
-            validation = validator.validate(model, solution)
+        summary = "\n".join(summary_lines)
 
-            math_model_data = {
-                "model": builder.to_dict(model),
-                "solution": {
-                    "success": solution.success,
-                    "values": solution.values,
-                    "message": solution.message,
-                    "statistics": solution.statistics,
-                    "numerical_data": solution.numerical_data,
-                },
-                "validation": {
-                    "is_valid": validation.is_valid,
-                    "score": validation.score,
-                },
-            }
+        pdf_path = result.get("pdf")
+        tex_path = result.get("tex")
 
-            # Step 3: 生成可视化
-            progress(0.4, desc="正在生成图表...")
-            chart_gen = ChartGenerator()
-            viz_files = []
-            if solution.success:
-                viz_files = chart_gen.generate(
-                    math_model_data["model"],
-                    math_model_data["solution"],
-                    output_dir / "charts",
-                )
-
-            # Step 4: 生成论文
-            progress(0.6, desc="正在撰写论文...")
-            generator = LaTeXGenerator()
-            sections, pdf_path = generator.generate(
-                topic=topic,
-                plan=plan,
-                math_model=math_model_data["model"],
-                solution=math_model_data["solution"],
-                visualizations=viz_files,
-                output_dir=output_dir / "paper",
-            )
-
-            # 准备输出
-            progress(0.9, desc="正在整理结果...")
-
-            # 构建状态信息
-            status = f"""
-## 生成状态
-
-- **题目**: {topic}
-- **论文类型**: {plan.get('paper_type', '未知')}
-- **数学模型**: {model.model_type}
-- **求解状态**: {'成功' if solution.success else '失败'}
-- **验证得分**: {validation.score:.2f}
-- **生成章节**: {len(sections)} 个
-- **图表数量**: {len(viz_files)} 个
-- **PDF状态**: {'已生成' if pdf_path and pdf_path.exists() else '生成失败（但LaTeX源文件可用）'}
-"""
-
-            # 读取LaTeX源文件
-            tex_path = output_dir / "paper" / "paper.tex"
-            latex_source = ""
-            if tex_path.exists():
-                with open(tex_path, 'r', encoding='utf-8') as f:
-                    latex_source = f.read()
-
-            progress(1.0, desc="完成！")
-
-            return (
-                sections.get("abstract", ""),
-                sections.get("introduction", ""),
-                sections.get("methodology", ""),
-                sections.get("experiments", ""),
-                sections.get("results", ""),
-                sections.get("conclusion", ""),
-                latex_source,
-                str(pdf_path) if pdf_path and pdf_path.exists() else None,
-                status,
-            )
+        return summary, pdf_path, tex_path
 
     except Exception as e:
-        return (
-            f"生成过程中出现错误: {str(e)}",
-            "", "", "", "", "", "", None,
-            f"错误: {str(e)}"
-        )
+        return f"异常: {str(e)}", None, None
 
 
-def create_ui():
-    """创建Gradio界面"""
+def analyze_topic(topic):
+    """Gradio回调：仅分析题目。"""
+    if not topic.strip():
+        return "请输入题目"
 
-    with gr.Blocks(title="PaperCarator - 学术论文自动生成器") as demo:
-        gr.Markdown("""
-        # PaperCarator - 学术论文自动生成器
+    try:
+        import sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from papercarator.planner import TopicAnalyzer
+        analyzer = TopicAnalyzer()
+        result = analyzer.analyze(topic)
 
-        输入论文题目，系统自动完成：
-        1. **题目分析** - 识别研究领域和方法
-        2. **数学建模** - 自动构建并求解数学模型
-        3. **可视化** - 生成图表和3D模型
-        4. **论文写作** - 生成完整学术论文（LaTeX/PDF）
-        """)
+        lines = [
+            f"论文类型: {result['paper_type']}",
+            f"难度: {result['difficulty']}",
+            f"应用领域: {result['application_domain']}",
+            f"关键词: {', '.join(result['keywords'])}",
+            f"研究方法: {', '.join(result['research_methods'])}",
+            f"数学工具: {', '.join(result['required_math_tools'])}",
+            f"可视化: {', '.join(result['required_visualizations'])}",
+        ]
+        return "\n".join(lines)
+    except Exception as e:
+        return f"分析失败: {str(e)}"
 
+
+# Build UI
+with gr.Blocks(title="PaperCarator - 数学建模论文生成器", theme=gr.themes.Soft()) as app:
+    gr.Markdown("# PaperCarator - 数学建模论文生成器")
+    gr.Markdown("输入题目，一键生成包含数学建模、图表、算法伪代码的完整学术论文。")
+
+    with gr.Tab("一键生成"):
         with gr.Row():
-            with gr.Column(scale=1):
-                # 输入区域
+            with gr.Column(scale=2):
                 topic_input = gr.Textbox(
                     label="论文题目",
-                    placeholder="例如：基于优化理论的资源配置问题研究",
+                    placeholder="例如：基于排队论的医院门诊流程优化研究",
                     lines=2,
                 )
-
+                with gr.Row():
+                    template_select = gr.Dropdown(
+                        choices=["custom", "ieee", "acm", "cjm", "springer_lncs", "thesis"],
+                        value="custom",
+                        label="论文模板",
+                    )
+                    output_input = gr.Textbox(
+                        label="输出目录（可选）",
+                        placeholder="留空自动创建",
+                    )
                 generate_btn = gr.Button("生成论文", variant="primary", size="lg")
 
-                # 状态显示
-                status_output = gr.Markdown("等待输入...")
+            with gr.Column(scale=3):
+                summary_output = gr.Textbox(label="生成结果", lines=15, interactive=False)
+                with gr.Row():
+                    pdf_file = gr.File(label="PDF文件")
+                    tex_file = gr.File(label="LaTeX文件")
 
-            with gr.Column(scale=2):
-                # 结果标签页
-                with gr.Tabs():
-                    with gr.TabItem("摘要"):
-                        abstract_output = gr.Markdown(label="摘要")
-
-                    with gr.TabItem("引言"):
-                        intro_output = gr.Markdown(label="引言")
-
-                    with gr.TabItem("方法"):
-                        method_output = gr.Markdown(label="研究方法")
-
-                    with gr.TabItem("实验"):
-                        exp_output = gr.Markdown(label="实验设计")
-
-                    with gr.TabItem("结果"):
-                        results_output = gr.Markdown(label="实验结果")
-
-                    with gr.TabItem("结论"):
-                        conclusion_output = gr.Markdown(label="结论")
-
-                    with gr.TabItem("LaTeX源码"):
-                        latex_output = gr.Code(
-                            label="LaTeX源代码",
-                            language="latex",
-                            lines=30,
-                        )
-
-                    with gr.TabItem("PDF下载"):
-                        pdf_output = gr.File(
-                            label="下载PDF",
-                            file_types=[".pdf"],
-                        )
-                        gr.Markdown("如果PDF生成失败，可以复制LaTeX源码到本地编译")
-
-        # 绑定按钮事件
         generate_btn.click(
-            fn=generate_paper,
-            inputs=[topic_input],
-            outputs=[
-                abstract_output,
-                intro_output,
-                method_output,
-                exp_output,
-                results_output,
-                conclusion_output,
-                latex_output,
-                pdf_output,
-                status_output,
-            ],
+            generate_paper,
+            inputs=[topic_input, template_select, output_input],
+            outputs=[summary_output, pdf_file, tex_file],
         )
 
-        # 示例
-        gr.Examples(
-            examples=[
-                ["基于优化理论的资源配置问题研究"],
-                ["基于深度学习的图像分类方法研究"],
-                ["微分方程在人口增长模型中的应用"],
-                ["线性规划在生产调度中的优化应用"],
-            ],
-            inputs=[topic_input],
-            label="示例题目",
+    with gr.Tab("题目分析"):
+        analyze_input = gr.Textbox(
+            label="输入题目",
+            placeholder="输入题目进行分析，查看模型类型、关键词等",
+            lines=2,
         )
+        analyze_btn = gr.Button("分析")
+        analyze_output = gr.Textbox(label="分析结果", lines=10, interactive=False)
+        analyze_btn.click(analyze_topic, inputs=analyze_input, outputs=analyze_output)
 
+    with gr.Tab("支持的模型"):
         gr.Markdown("""
-        ---
-        **说明**：
-        - 当前版本使用模板生成内容，未接入LLM
-        - 数学建模使用SymPy/SciPy求解
-        - PDF生成需要本地安装XeLaTeX
-        - 生成的论文可作为初稿参考，建议人工审核修改
+        | 类型 | 说明 |
+        |------|------|
+        | equation_system | 方程组 |
+        | optimization | 优化问题 |
+        | multi_objective | 多目标优化 |
+        | differential | 微分方程 |
+        | pde | 偏微分方程 |
+        | queueing | 排队系统 |
+        | markov_chain | 马尔可夫链 |
+        | bayesian | 贝叶斯推断 |
+        | statistical | 统计回归 |
+        | network_flow | 网络流 |
+        | graph_theory | 图论 |
+        | time_series | 时间序列 |
+        | game_theory | 博弈论 |
+        | control_theory | 控制理论 |
+        | clustering | 聚类分析 |
+        | fuzzy_logic | 模糊逻辑 |
         """)
-
-    return demo
 
 
 if __name__ == "__main__":
-    demo = create_ui()
-    demo.launch(
-        server_name="0.0.0.0",
-        server_port=7860,
-        share=False,
-        show_error=True,
-    )
+    app.launch(server_name="0.0.0.0", server_port=7860, share=False)
