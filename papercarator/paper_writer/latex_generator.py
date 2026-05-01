@@ -11,6 +11,7 @@ from papercarator.paper_writer.template_manager import TemplateManager
 from papercarator.paper_writer.algorithm_writer import AlgorithmWriter
 from papercarator.paper_writer.academic_enhancer import AcademicEnhancer
 from papercarator.paper_writer.quality_scorer import PaperQualityScorer
+from papercarator.paper_writer.llm_writer import LLMWriter
 
 
 class LaTeXGenerator:
@@ -28,6 +29,7 @@ class LaTeXGenerator:
         self.algorithm_writer = AlgorithmWriter()
         self.academic_enhancer = AcademicEnhancer()
         self.quality_scorer = PaperQualityScorer()
+        self.llm_writer = LLMWriter()
         logger.info(f"初始化 LaTeXGenerator (编译器: {self.latex_compiler})")
 
     @staticmethod
@@ -79,8 +81,29 @@ class LaTeXGenerator:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. 生成各章节内容
-        sections = self.section_writer.write_all_sections(topic, plan, math_model, solution)
+        # 1. 生成各章节内容 (LLM优先，规则兜底)
+        if self.llm_writer.is_available():
+            logger.info("使用 LLM 深度写作...")
+            llm_sections = self.llm_writer.write_all_sections(
+                topic, plan, math_model, solution
+            )
+            if llm_sections:
+                # LLM 生成了部分内容，用规则模板补充缺失章节
+                rule_sections = self.section_writer.write_all_sections(
+                    topic, plan, math_model, solution
+                )
+                sections = {**rule_sections, **llm_sections}
+                logger.info(f"LLM 写作完成: {len(llm_sections)}/{len(rule_sections)} 章节")
+            else:
+                logger.info("LLM 写作失败，使用规则模板")
+                sections = self.section_writer.write_all_sections(
+                    topic, plan, math_model, solution
+                )
+        else:
+            logger.info("LLM 不可用，使用规则模板")
+            sections = self.section_writer.write_all_sections(
+                topic, plan, math_model, solution
+            )
 
         # 1.5 学术用语增强
         sections = self.academic_enhancer.enhance_sections(sections)
