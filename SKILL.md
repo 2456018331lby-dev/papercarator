@@ -1,73 +1,68 @@
 ---
 name: papercarator
 description: >
-  End-to-end math-modeling paper generation skill. From topic to PDF in one command.
-  Supports 16 model families with automatic: topic analysis, parameter extraction,
-  model construction, solver execution, chart/3D generation, algorithm pseudocode,
-  academic language enhancement, quality scoring, and LaTeX/PDF compilation.
-  Models: optimization, equations, ODE/PDE, queueing, Markov, Bayesian, statistics,
-  network flow, graph theory, time-series, game theory, control theory, clustering,
-  multi-objective, fuzzy logic. Integrates Stable Diffusion for concept diagrams.
-  Templates: standard, IEEE, ACM, Chinese journal. NOT for: literature-review-only,
-  open-domain research, citation-heavy academic writing, or industrial CAD.
+  Math-modeling paper generator. From topic to PDF in one command.
+  Use when user wants to generate an academic paper with mathematical modeling,
+  equations, solver results, charts, algorithm pseudocode, and LaTeX/PDF output.
+  Supports 16 model types: optimization, equations, ODE/PDE, queueing, Markov,
+  Bayesian, statistics, network flow, graph theory, time-series, game theory,
+  control theory, clustering, multi-objective, fuzzy logic.
+  NOT for: literature-review-only, open-domain research, industrial CAD.
 ---
 
-# PaperCarator Skill
+# PaperCarator — One-Command Paper Generation
 
-## Quick Start
+## Usage (copy-paste for Claude Code / Hermes)
 
 ```bash
-# 1. Classify topic fit
-python3.12 -m papercarator.cli analyze "<topic>"
-
-# 2. Full generation (topic -> PDF)
-python3.12 -m papercarator.cli run "<topic>" --output <dir> --no-github --no-vscode
-
-# 3. With specific template
-python3.12 -m papercarator.cli run "<topic>" --template ieee --output <dir>
-
-# 4. Batch processing
-python scripts/batch_run.py topics.txt --output ./batch_output
-
-# 5. Validate output quality
-python scripts/validate_output.py <output_dir>
-
-# 6. Sensitivity analysis
-python scripts/sensitivity_analysis.py queueing --output results.json
+cd /path/to/papercarator && python3.12 scripts/run_paper.py "YOUR_TOPIC_HERE"
 ```
 
-## Pipeline (7 Steps)
+That's it. The script handles everything: analysis → modeling → solving → charts → pseudocode → academic enhancement → LaTeX → PDF → quality report.
 
-1. **Planner** — Topic analysis: keywords, methods, domain, model routing
-2. **ParamExtractor** — Extract numerical parameters from topic text
-3. **MathModeling** — Build symbolic/numeric model, solve (SymPy/SciPy)
-4. **Visualization** — 2D charts (matplotlib) + 3D surfaces + SD concept diagrams
-5. **PaperWriter** — LaTeX sections + algorithm pseudocode + academic enhancement
-6. **QualityScorer** — Auto-score paper quality (7 dimensions, 0-100)
-7. **Compiler** — xelatex -> PDF
+## Options
 
-## What's Auto-Generated
+```bash
+# Default: output to ./output/<topic>/
+python3.12 scripts/run_paper.py "基于排队论的医院门诊流程优化研究"
 
-- Topic-specific keywords (not generic)
-- Descriptive Chinese figure captions
-- Model-specific references (5+ per type from real textbooks)
-- Algorithm pseudocode (LaTeX algorithmic environment)
-- Academic language (colloquial -> formal Chinese replacement)
-- Quality report with improvement suggestions
+# Custom output directory
+python3.12 scripts/run_paper.py "基于贝叶斯推断的药物疗效评估" --output /path/to/dir
 
-## Templates
+# Specific template (standard/ieee/acm/cjm)
+python3.12 scripts/run_paper.py "基于PID控制的自动驾驶" --template ieee
 
-| ID | Style |
-|----|-------|
-| standard | Standard article (default) |
-| ieee | IEEE double-column conference |
-| acm | ACM sigconf |
-| cjm | Chinese journal with headers/footers |
+# Check existing output quality
+python3.12 scripts/quick_check.py /path/to/output/dir
+```
 
-## Reference Files
+## What You Get
 
-- `references/model_profiles.md` — 16 model type profiles
-- `references/domain_backgrounds.md` — Domain-specific intro text
-- `scripts/validate_output.py` — Output artifact validation
-- `scripts/sensitivity_analysis.py` — Parameter sweep
-- `scripts/batch_run.py` — Batch topic processing
+After running, the script prints a JSON summary:
+
+```json
+{
+  "topic": "...",
+  "model_type": "queueing",
+  "keywords": ["排队", "服务台", "优化"],
+  "quality_score": 77.4,
+  "pdf": "/path/to/paper.pdf",
+  "charts": ["queue_curve.png", "queue_metrics.png"],
+  "has_algorithm": true,
+  "suggestions": ["math_rigor 维度得分较低 (52)"]
+}
+```
+
+If PDF compilation fails (no xelatex), the .tex file is still generated and valid.
+
+## Supported Models (16)
+
+equation_system | optimization | multi_objective | differential | pde |
+queueing | markov_chain | bayesian | statistical | network_flow |
+time_series | game_theory | control_theory | clustering | graph_theory | fuzzy_logic
+
+## Troubleshooting
+
+- **No xelatex**: Install MiKTeX or TeX Live. Script auto-detects Windows MiKTeX in WSL.
+- **Missing deps**: `pip install -e ".[dev]"` in the papercarator directory.
+- **Low quality score**: Run `python3.12 scripts/quick_check.py <dir>` for details.
