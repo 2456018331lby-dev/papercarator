@@ -91,6 +91,17 @@ class LaTeXGenerator:
         if algorithm_code and "methodology" in sections:
             sections["methodology"] += "\n\n\\subsection{算法描述}\n\n" + algorithm_code
 
+        # 1.7 文献检索补充
+        if "references" in sections:
+            try:
+                from papercarator.literature_search import LiteratureSearcher
+                searcher = LiteratureSearcher()
+                sections["references"] = searcher.enrich_references(
+                    topic, model_type, sections["references"]
+                )
+            except Exception as e:
+                logger.info(f"文献检索跳过: {e}")
+
         # 2. 处理图片路径
         sections = self._process_figures(sections, visualizations, output_dir)
 
@@ -287,8 +298,16 @@ class LaTeXGenerator:
 
         if is_windows_compiler:
             # Windows编译器需要Windows路径
-            tex_arg = str(tex_path).replace("/mnt/c/", "C:\\").replace("/", "\\")
-            out_arg = str(output_dir.resolve()).replace("/mnt/c/", "C:\\").replace("/", "\\")
+            path_str = str(tex_path)
+            out_str = str(output_dir.resolve())
+            # Only convert if it's under /mnt/X/ (Windows drive mount)
+            if path_str.startswith("/mnt/"):
+                tex_arg = path_str.replace("/mnt/c/", "C:\\").replace("/mnt/d/", "D:\\").replace("/", "\\")
+                out_arg = out_str.replace("/mnt/c/", "C:\\").replace("/mnt/d/", "D:\\").replace("/", "\\")
+            else:
+                # Non-Windows path, can't use Windows compiler
+                logger.warning("Windows编译器无法访问WSL本地路径，跳过PDF编译")
+                return None
         else:
             tex_filename = tex_path.name
             out_arg = str(output_dir.resolve())

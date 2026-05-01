@@ -28,10 +28,22 @@ from papercarator.paper_writer import LaTeXGenerator
 from papercarator.github_publisher import GitHubPublisher
 
 
-def run(topic: str, output_dir: str = None, template: str = "custom") -> dict:
+def run(topic: str, output_dir: str = None, template: str = "custom",
+        data_file: str = None) -> dict:
     """Run the full paper generation pipeline. Returns summary dict."""
 
     start_time = time.time()
+
+    # Load external data if provided
+    imported_data = None
+    if data_file:
+        from papercarator.data_importer import DataImporter
+        importer = DataImporter()
+        try:
+            imported_data = importer.load(data_file)
+            logger.info(f"已导入数据: {imported_data['n_rows']}行 x {imported_data['n_cols']}列")
+        except Exception as e:
+            logger.warning(f"数据导入失败: {e}")
 
     # Setup config
     config = Config()
@@ -54,7 +66,7 @@ def run(topic: str, output_dir: str = None, template: str = "custom") -> dict:
         "builder": ModelBuilder(),
         "solver": ModelSolver(),
         "validator": ModelValidator(),
-        "build_and_solve": lambda topic, plan, matlab_bridge=None: _build_and_solve(topic, plan),
+        "build_and_solve": lambda topic, plan, matlab_bridge=None: _build_and_solve(topic, plan, imported_data),
     })
     pipeline.register_module("visualization", {
         "chart": ChartGenerator(),
@@ -127,11 +139,23 @@ def run(topic: str, output_dir: str = None, template: str = "custom") -> dict:
     return summary
 
 
-def _build_and_solve(topic, plan):
+def _build_and_solve(topic, plan, imported_data=None):
     builder = ModelBuilder()
     solver = ModelSolver()
     validator = ModelValidator()
+
     model = builder.build(topic, plan)
+
+    # If we have imported data, apply it to model parameters
+    if imported_data:
+        from papercarator.data_importer import DataImporter
+        importer = DataImporter()
+        data_params = importer.to_model_params(imported_data, model.model_type)
+        if data_params:
+            model.parameters.update(data_params)
+            model.metadata["data_source"] = imported_data.get("source", "")
+            model.metadata["data_rows"] = imported_data.get("n_rows", 0)
+
     solution = solver.solve(model)
     validation = validator.validate(model, solution)
     return {
@@ -164,6 +188,15 @@ def _visualize(topic, math_model, plan, output_dir):
         topic, math_model.get("model", {}), output_dir / "3d_models"
     )
     all_files.extend(model3d_files)
+
+    # Generate concept diagram (pure matplotlib, no GPU needed)
+    from papercarator.visualization.concept_diagrams import ConceptDiagramGenerator
+    concept_gen = ConceptDiagramGenerator()
+    model_type = math_model.get("model", {}).get("model_type", "")
+    concept = concept_gen.generate(model_type, topic, output_dir / "concepts")
+    if concept:
+        all_files.append(concept)
+
     return all_files
 
 
@@ -185,11 +218,12 @@ def main():
     parser.add_argument("topic", help="Paper topic / title")
     parser.add_argument("--output", "-o", help="Output directory (default: ./output/<topic>/)")
     parser.add_argument("--template", "-t", default="custom",
-                        choices=["custom", "ieee", "acm", "cjm"],
+                        choices=["custom", "ieee", "acm", "cjm", "springer_lncs", "thesis"],
                         help="LaTeX template (default: custom)")
+    parser.add_argument("--data", "-d", help="Data file path (CSV/Excel/JSON) for real data modeling")
     args = parser.parse_args()
 
-    summary = run(args.topic, args.output, args.template)
+    summary = run(args.topic, args.output, args.template, args.data)
 
     # Print JSON summary to stdout
     print(json.dumps(summary, ensure_ascii=False, indent=2))
