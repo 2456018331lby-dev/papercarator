@@ -48,6 +48,12 @@ class ModelBuilder:
             "time_series": self._build_time_series,
             "queueing": self._build_queueing,
             "markov_chain": self._build_markov_chain,
+            "game_theory": self._build_game_theory,
+            "control_theory": self._build_control_theory,
+            "clustering": self._build_clustering,
+            "bayesian": self._build_bayesian,
+            "graph_theory": self._build_graph_theory,
+            "fuzzy_logic": self._build_fuzzy_logic,
         }
         logger.info("初始化 ModelBuilder")
 
@@ -89,6 +95,30 @@ class ModelBuilder:
         # 马尔可夫链类
         if any(w in topic for w in ["马尔可夫", "状态转移", "转移概率", "markov chain", "state transition"]):
             return "markov_chain"
+
+        # 博弈论类
+        if any(w in topic for w in ["博弈", "Nash", "nash", "纳什", "博弈论", "game theory", "对策", "均衡", "优势策略", "占优"]):
+            return "game_theory"
+
+        # 控制理论类
+        if any(w in topic for w in ["控制", "PID", "pid", "控制系统", "控制器", "稳定性", "反馈", "control theory", "LQR", "lqr", "最优控制"]):
+            return "control_theory"
+
+        # 聚类分析类
+        if any(w in topic for w in ["聚类", "K-means", "k-means", "层次聚类", "clustering", "分类", "分群", "数据挖掘"]):
+            return "clustering"
+
+        # 贝叶斯推断类
+        if any(w in topic for w in ["贝叶斯", "Bayesian", "bayesian", "先验", "后验", "概率推断"]):
+            return "bayesian"
+
+        # 图论类
+        if any(w in topic for w in ["图论", "最小生成树", "连通性", "graph theory", "MST", "拓扑"]):
+            return "graph_theory"
+
+        # 模糊逻辑类
+        if any(w in topic for w in ["模糊", "fuzzy", "隶属函数", "模糊推理", "模糊控制"]):
+            return "fuzzy_logic"
 
         # 多目标优化类
         if any(w in topic for w in ["多目标", "帕累托", "pareto", "multi-objective"]):
@@ -452,6 +482,233 @@ class ModelBuilder:
                 "model_type": "linear_regression",
                 "topic": topic,
             }
+        )
+        return model
+
+    def _build_game_theory(self, topic: str, plan: dict[str, Any]) -> MathModel:
+        """构建博弈论模型（示例：双人零和博弈与Nash均衡）"""
+        logger.info("构建博弈论模型")
+
+        # 双人零和博弈收益矩阵（A的收益）
+        payoff_matrix_a = np.array([
+            [3.0, 0.0, 4.0],
+            [2.0, 4.0, 1.0],
+            [0.0, 3.0, 2.0],
+        ])
+
+        # 符号定义：混合策略概率
+        p1, p2, p3 = sp.symbols('p1 p2 p3', real=True)
+        q1, q2, q3 = sp.symbols('q1 q2 q3', real=True)
+
+        # 策略概率归一化约束
+        strategy_sum_a = sp.Eq(p1 + p2 + p3, 1)
+        strategy_sum_b = sp.Eq(q1 + q2 + q3, 1)
+
+        # 期望收益函数符号化
+        expected_payoff = (
+            p1 * q1 * payoff_matrix_a[0, 0] +
+            p1 * q2 * payoff_matrix_a[0, 1] +
+            p1 * q3 * payoff_matrix_a[0, 2] +
+            p2 * q1 * payoff_matrix_a[1, 0] +
+            p2 * q2 * payoff_matrix_a[1, 1] +
+            p2 * q3 * payoff_matrix_a[1, 2] +
+            p3 * q1 * payoff_matrix_a[2, 0] +
+            p3 * q2 * payoff_matrix_a[2, 1] +
+            p3 * q3 * payoff_matrix_a[2, 2]
+        )
+
+        model = MathModel(
+            name="双人零和博弈Nash均衡模型",
+            description=f"基于'{topic}'构建的博弈论与Nash均衡模型",
+            symbols={"p1": p1, "p2": p2, "p3": p3, "q1": q1, "q2": q2, "q3": q3},
+            equations=[strategy_sum_a, strategy_sum_b],
+            objective=expected_payoff,
+            objective_type="maximize",
+            model_type="game_theory",
+            parameters={"players": 2, "strategy_size": 3, "game_type": "zero_sum"},
+            metadata={
+                "payoff_matrix": payoff_matrix_a.tolist(),
+                "player_names": ["A", "B"],
+                "topic": topic,
+            }
+        )
+        return model
+
+    def _build_control_theory(self, topic: str, plan: dict[str, Any]) -> MathModel:
+        """构建控制理论模型（示例：PID控制器）"""
+        logger.info("构建控制理论模型")
+
+        # PID 参数符号
+        Kp, Ki, Kd = sp.symbols('Kp Ki Kd', real=True)
+        # 系统参数
+        a, b = sp.symbols('a b', real=True, positive=True)
+        # 参考信号
+        r_t = sp.Function('r')
+        y_t = sp.Function('y')
+        e_t = sp.Function('e')
+
+        # 简化PID闭环特征方程（示例：二阶系统）
+        # 传递函数特征方程: s^2 + (1+Kp)*s + Ki = 0
+        s = sp.symbols('s')
+        characteristic_eq = sp.Eq(s**2 + (1 + Kp) * s + Ki, 0)
+
+        # 微分方程形式的系统模型
+        # d^2y/dt^2 + a*dy/dt + b*y = Kp*e + Ki*∫e + Kd*de/dt
+        t = sp.symbols('t')
+        e = sp.Function('e')(t)
+        y = sp.Function('y')(t)
+        system_eq = sp.Eq(
+            sp.Derivative(sp.Derivative(y, t), t) + a * sp.Derivative(y, t) + b * y,
+            Kp * e + Ki * sp.Integral(e, (t, 0, t)) + Kd * sp.Derivative(e, t)
+        )
+
+        model = MathModel(
+            name="PID控制系统模型",
+            description=f"基于'{topic}'构建的PID控制理论与系统稳定性分析模型",
+            symbols={"Kp": Kp, "Ki": Ki, "Kd": Kd, "a": a, "b": b},
+            equations=[system_eq, characteristic_eq],
+            model_type="control_theory",
+            parameters={"a": 2.0, "b": 1.0, "system_order": 2},
+            metadata={
+                "controller_type": "PID",
+                "system_type": "second_order_linear",
+                "topic": topic,
+            }
+        )
+        return model
+
+    def _build_clustering(self, topic: str, plan: dict[str, Any]) -> MathModel:
+        """构建聚类分析模型（示例：K-means）"""
+        logger.info("构建聚类分析模型")
+
+        # 生成示例二维数据点（3个簇）
+        np.random.seed(42)
+        cluster1 = np.random.randn(20, 2) + [2, 2]
+        cluster2 = np.random.randn(20, 2) + [-2, 1]
+        cluster3 = np.random.randn(20, 2) + [0, -3]
+        data = np.vstack([cluster1, cluster2, cluster3])
+
+        # 簇数 K
+        K = sp.symbols('K', integer=True, positive=True)
+        # 聚类中心
+        mu_x, mu_y = sp.symbols('mu_x mu_y', real=True)
+
+        # 距离度量：欧氏距离平方
+        x_i = sp.symbols('x_i y_i', real=True)
+        dist_sq = (x_i[0] - mu_x)**2 + (x_i[1] - mu_y)**2
+
+        model = MathModel(
+            name="K-means聚类分析模型",
+            description=f"基于'{topic}'构建的聚类分析模型",
+            symbols={"K": K, "mu_x": mu_x, "mu_y": mu_y},
+            equations=[],
+            model_type="clustering",
+            parameters={"n_clusters": 3, "n_samples": 60, "n_features": 2},
+            metadata={
+                "data": data.tolist(),
+                "clustering_method": "kmeans",
+                "distance_metric": "euclidean",
+                "topic": topic,
+            },
+        )
+        return model
+
+    def _build_bayesian(self, topic: str, plan: dict[str, Any]) -> MathModel:
+        """构建贝叶斯推断模型。"""
+        logger.info("构建贝叶斯推断模型")
+
+        alpha_prior, beta_prior = sp.symbols('alpha beta', positive=True)
+        theta = sp.symbols('theta', real=True)
+
+        posterior_eq = sp.Eq(
+            sp.Symbol('P_theta_given_data'),
+            sp.Symbol('Beta') * (alpha_prior + sp.Symbol('successes'))
+            / (alpha_prior + beta_prior + sp.Symbol('n_trials'))
+        )
+
+        np.random.seed(42)
+        true_theta = 0.65
+        n_trials = 50
+        successes = int(np.random.binomial(n_trials, true_theta))
+
+        model = MathModel(
+            name="贝叶斯推断模型",
+            description=f"基于'{topic}'构建的贝叶斯参数估计模型",
+            symbols={"alpha": alpha_prior, "beta": beta_prior, "theta": theta},
+            equations=[posterior_eq],
+            model_type="bayesian",
+            parameters={
+                "alpha_prior": 2.0, "beta_prior": 2.0,
+                "n_trials": n_trials, "successes": successes,
+            },
+            metadata={
+                "topic": topic, "prior": "Beta(2, 2)",
+                "likelihood": "Binomial",
+                "posterior": f"Beta({2 + successes}, {2 + n_trials - successes})",
+            },
+        )
+        return model
+
+    def _build_graph_theory(self, topic: str, plan: dict[str, Any]) -> MathModel:
+        """构建图论模型。"""
+        logger.info("构建图论模型")
+
+        n = 6
+        np.random.seed(42)
+        adj = np.random.randint(1, 20, size=(n, n))
+        adj = (adj + adj.T) // 2
+        np.fill_diagonal(adj, 0)
+
+        x_vars = sp.symbols(f'x_0:{n}', nonneg=True)
+
+        model = MathModel(
+            name="图论最小生成树模型",
+            description=f"基于'{topic}'构建的图论与网络优化模型",
+            symbols={f"x_{i}": x_vars[i] for i in range(n)},
+            equations=[],
+            model_type="graph_theory",
+            parameters={"n_nodes": n},
+            metadata={
+                "topic": topic,
+                "adjacency_matrix": adj.tolist(),
+                "nodes": [f"V{i}" for i in range(n)],
+                "algorithm": "kruskal",
+            },
+        )
+        return model
+
+    def _build_fuzzy_logic(self, topic: str, plan: dict[str, Any]) -> MathModel:
+        """构建模糊逻辑模型。"""
+        logger.info("构建模糊逻辑模型")
+
+        x = sp.Symbol('x', real=True)
+        y = sp.Symbol('y', real=True)
+
+        mf_params = {
+            "low": {"a": 0, "b": 0, "c": 5},
+            "medium": {"a": 3, "b": 5, "c": 7},
+            "high": {"a": 5, "b": 10, "c": 10},
+        }
+
+        rules = [
+            {"antecedent": ("x", "low"), "consequent": "low", "weight": 1.0},
+            {"antecedent": ("x", "medium"), "consequent": "medium", "weight": 1.0},
+            {"antecedent": ("x", "high"), "consequent": "high", "weight": 1.0},
+        ]
+
+        model = MathModel(
+            name="模糊推理系统模型",
+            description=f"基于'{topic}'构建的模糊逻辑推理模型",
+            symbols={"x": x, "y": y},
+            equations=[],
+            model_type="fuzzy_logic",
+            parameters={"n_inputs": 1, "n_outputs": 1, "defuzzification": "centroid"},
+            metadata={
+                "topic": topic,
+                "membership_functions": mf_params,
+                "rules": rules,
+                "universe": [0, 10],
+            },
         )
         return model
 

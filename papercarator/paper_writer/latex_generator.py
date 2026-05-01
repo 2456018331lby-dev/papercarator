@@ -8,6 +8,9 @@ from loguru import logger
 
 from papercarator.paper_writer.section_writer import SectionWriter
 from papercarator.paper_writer.template_manager import TemplateManager
+from papercarator.paper_writer.algorithm_writer import AlgorithmWriter
+from papercarator.paper_writer.academic_enhancer import AcademicEnhancer
+from papercarator.paper_writer.quality_scorer import PaperQualityScorer
 
 
 class LaTeXGenerator:
@@ -22,6 +25,9 @@ class LaTeXGenerator:
         self.template_manager = template_manager or TemplateManager()
         self.section_writer = section_writer or SectionWriter()
         self.latex_compiler = latex_compiler
+        self.algorithm_writer = AlgorithmWriter()
+        self.academic_enhancer = AcademicEnhancer()
+        self.quality_scorer = PaperQualityScorer()
         logger.info(f"初始化 LaTeXGenerator (编译器: {latex_compiler})")
 
     def generate(self, topic: str, plan: dict[str, Any],
@@ -47,6 +53,15 @@ class LaTeXGenerator:
         # 1. 生成各章节内容
         sections = self.section_writer.write_all_sections(topic, plan, math_model, solution)
 
+        # 1.5 学术用语增强
+        sections = self.academic_enhancer.enhance_sections(sections)
+
+        # 1.6 添加算法伪代码
+        model_type = math_model.get("model_type", "")
+        algorithm_code = self.algorithm_writer.generate(model_type)
+        if algorithm_code and "methodology" in sections:
+            sections["methodology"] += "\n\n\\subsection{算法描述}\n\n" + algorithm_code
+
         # 2. 处理图片路径
         sections = self._process_figures(sections, visualizations, output_dir)
 
@@ -65,7 +80,41 @@ class LaTeXGenerator:
         # 6. 编译PDF
         pdf_path = self._compile_latex(tex_path, output_dir)
 
+        # 7. 质量评分
+        chart_files = [Path(f) for f in (output_dir.glob("*.png"))]
+        report = self.quality_scorer.score(latex_content, chart_files, model_type)
+        logger.info(f"论文质量评分: {report.total_score:.1f}/100")
+        for suggestion in report.suggestions[:3]:
+            logger.info(f"  建议: {suggestion}")
+
         return sections, pdf_path
+
+    CAPTION_MAP = {
+        "queue_curve": "排队长度随时间演化曲线",
+        "queue_metrics": "排队系统关键性能指标",
+        "queueing_3d_profile": "排队系统三维可视化",
+        "optimization_landscape": "优化目标函数等高线图",
+        "optimization_stats": "优化求解统计信息",
+        "differential_solution": "微分方程数值解（位移与相空间）",
+        "regression_analysis": "回归分析与残差诊断图",
+        "statistical_summary": "统计分析汇总",
+        "network_flow_graph": "网络流最短路径图",
+        "network_flow_allocation": "各边流量分配图",
+        "time_series_forecast": "时间序列拟合与预测结果",
+        "time_series_residuals": "预测残差分析",
+        "pareto_front": "帕累托前沿近似",
+        "pde_heatmaps": "偏微分方程温度场演化",
+        "pde_surface": "偏微分方程解的三维曲面",
+        "markov_distribution_evolution": "马尔可夫链状态分布演化",
+        "markov_probability_heatmap": "状态概率热力图",
+        "game_payoff_matrix": "博弈收益矩阵热力图",
+        "game_strategy_distribution": "混合策略概率分布",
+        "control_step_response": "控制系统阶跃响应曲线",
+        "control_stability_metrics": "控制系统稳定性指标",
+        "clustering_result": "聚类分析散点图",
+        "clustering_metrics": "聚类质量指标",
+        "equation_solution": "方程组求解结果",
+    }
 
     def _process_figures(self, sections: dict[str, str],
                         visualizations: list[Path], output_dir: Path) -> dict[str, str]:
@@ -74,13 +123,15 @@ class LaTeXGenerator:
             return sections
 
         # 在结果章节添加图片
-        figure_text = "\n\n\\subsection{图表展示}\n\n"
+        figure_text = "\n\\subsection{图表展示}\n\n"
         for i, viz_path in enumerate(visualizations[:6]):  # 最多6张图
             filename = viz_path.name
+            stem = viz_path.stem
+            caption = self.CAPTION_MAP.get(stem, f"{stem} 可视化结果")
             figure_text += f"""\\begin{{figure}}[H]
 \\centering
 \\includegraphics[width=0.8\\textwidth]{{{filename}}}
-\\caption{{Figure {i+1}: Visualization result}}
+\\caption{{{caption}}}
 \\end{{figure}}
 
 """

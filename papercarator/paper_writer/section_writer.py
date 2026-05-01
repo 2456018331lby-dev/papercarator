@@ -107,6 +107,54 @@ class SectionWriter:
             "benchmarks": ["矩阵幂法", "稳态分布求解", "状态转移图分析"],
             "future": "可进一步扩展到隐马尔可夫模型与连续时间马尔可夫过程。",
         },
+        "game_theory": {
+            "label": "博弈论模型",
+            "focus": "参与者策略、收益矩阵、均衡结构与最优响应关系",
+            "workflow": "构造策略集合与收益矩阵、分析最优响应、求解均衡或博弈值",
+            "evaluation": "均衡稳定性、策略概率分布、博弈值与最优响应差距",
+            "benchmarks": ["纯策略枚举", "混合策略线性规划", "最小最大分析"],
+            "future": "可进一步扩展到非零和博弈、演化博弈与多主体动态博弈。",
+        },
+        "control_theory": {
+            "label": "控制理论模型",
+            "focus": "反馈结构、控制参数、系统稳定性与动态响应特征",
+            "workflow": "建立闭环系统方程、设置控制参数、分析特征根与阶跃响应",
+            "evaluation": "稳定性、阻尼比、自然频率、响应速度与超调风险",
+            "benchmarks": ["Routh-Hurwitz 判据", "PID 参数整定", "阶跃响应分析"],
+            "future": "可进一步扩展到状态空间控制、LQR 与鲁棒控制系统。",
+        },
+        "clustering": {
+            "label": "聚类分析模型",
+            "focus": "样本分布、簇中心、类内距离与无监督结构发现",
+            "workflow": "构造样本特征空间、初始化聚类中心、迭代分配样本并更新中心",
+            "evaluation": "簇内误差、聚类中心稳定性、类别分离度与可解释性",
+            "benchmarks": ["K-means", "层次聚类", "密度聚类"],
+            "future": "可进一步扩展到自动选簇、谱聚类与高维特征降维分析。",
+        },
+        "bayesian": {
+            "label": "贝叶斯推断模型",
+            "focus": "先验分布、似然函数、后验推断与不确定性量化",
+            "workflow": "设定先验、构造似然、执行共轭更新或采样、分析后验分布",
+            "evaluation": "后验均值、可信区间、先验敏感性与收敛诊断",
+            "benchmarks": ["Beta-Binomial共轭", "正态-逆Gamma", "MCMC采样"],
+            "future": "可进一步扩展到变分推断与层次贝叶斯模型。",
+        },
+        "graph_theory": {
+            "label": "图论模型",
+            "focus": "节点连通性、路径优化、最小生成树与网络结构分析",
+            "workflow": "构建邻接矩阵、选择图算法、分析结构特征与优化路径",
+            "evaluation": "最小代价、连通分量、图密度与算法复杂度",
+            "benchmarks": ["Kruskal MST", "Dijkstra最短路径", "Ford-Fulkerson最大流"],
+            "future": "可进一步扩展到有向图、加权超图与动态网络分析。",
+        },
+        "fuzzy_logic": {
+            "label": "模糊逻辑模型",
+            "focus": "隶属函数、模糊规则、推理机制与去模糊化",
+            "workflow": "定义模糊集合与隶属函数、建立规则库、执行模糊推理、去模糊化",
+            "evaluation": "去模糊化输出、规则覆盖度、隶属函数合理性与推理一致性",
+            "benchmarks": ["Mamdani推理", "Sugeno推理", "重心法去模糊化"],
+            "future": "可进一步扩展到自适应模糊系统与神经模糊混合模型。",
+        },
     }
 
     def __init__(self, use_llm: bool = False):
@@ -528,7 +576,7 @@ Python & 3.12 \\\\
 {profile["future"]}"""
 
     def _write_references(self, topic: str, math_model: dict[str, Any]) -> str:
-        """生成参考文献。"""
+        """生成参考文献 - 按模型类型动态生成。"""
         model_type = math_model.get("model_type", "equation_system")
 
         common_refs = [
@@ -546,13 +594,49 @@ Python & 3.12 \\\\
                 "\\bibitem{ref4} Bertsekas D P. Nonlinear Programming. Athena Scientific, 1999.",
                 "\\bibitem{ref5} Fletcher R. Practical Methods of Optimization. Wiley, 1987.",
             ],
+            "multi_objective": [
+                "\\bibitem{ref4} Deb K. Multi-Objective Optimization Using Evolutionary Algorithms. Wiley, 2001.",
+                "\\bibitem{ref5} Coello Coello C A. Evolutionary Algorithms for Solving Multi-Objective Problems. Springer, 2007.",
+            ],
             "differential": [
                 "\\bibitem{ref4} Butcher J C. Numerical Methods for Ordinary Differential Equations. Wiley, 2008.",
                 "\\bibitem{ref5} Hairer E, Wanner G. Solving Ordinary Differential Equations II. Springer, 1996.",
             ],
+            "pde": [
+                "\\bibitem{ref4} LeVeque R J. Finite Difference Methods for Ordinary and Partial Differential Equations. SIAM, 2007.",
+                "\\bibitem{ref5} Strikwerda J C. Finite Difference Schemes and Partial Differential Equations. SIAM, 2004.",
+            ],
             "statistical": [
                 "\\bibitem{ref4} Hastie T, Tibshirani R, Friedman J. The Elements of Statistical Learning. Springer, 2009.",
                 "\\bibitem{ref5} Draper N R, Smith H. Applied Regression Analysis. Wiley, 1998.",
+            ],
+            "network_flow": [
+                "\\bibitem{ref4} Ahuja R K, Magnanti T L, Orlin J B. Network Flows. Prentice Hall, 1993.",
+                "\\bibitem{ref5} Cormen T H, et al. Introduction to Algorithms. MIT Press, 3rd edition, 2009.",
+            ],
+            "time_series": [
+                "\\bibitem{ref4} Box G E P, Jenkins G M, Reinsel G C. Time Series Analysis. Wiley, 2015.",
+                "\\bibitem{ref5} Hyndman R J, Athanasopoulos G. Forecasting: Principles and Practice. OTexts, 2018.",
+            ],
+            "queueing": [
+                "\\bibitem{ref4} Gross D, Harris C M. Fundamentals of Queueing Theory. Wiley, 1998.",
+                "\\bibitem{ref5} Kleinrock L. Queueing Systems, Volume 1: Theory. Wiley, 1975.",
+            ],
+            "markov_chain": [
+                "\\bibitem{ref4} Norris J R. Markov Chains. Cambridge University Press, 1997.",
+                "\\bibitem{ref5} Bremaud P. Markov Chains: Gibbs Fields, Monte Carlo Simulation, and Queues. Springer, 2020.",
+            ],
+            "game_theory": [
+                "\\bibitem{ref4} Osborne M J, Rubinstein A. A Course in Game Theory. MIT Press, 1994.",
+                "\\bibitem{ref5} Fudenberg D, Tirole J. Game Theory. MIT Press, 1991.",
+            ],
+            "control_theory": [
+                "\\bibitem{ref4} Ogata K. Modern Control Engineering. Prentice Hall, 5th edition, 2010.",
+                "\\bibitem{ref5} Franklin G F, Powell J D, Emami-Naeini A. Feedback Control of Dynamic Systems. Pearson, 2014.",
+            ],
+            "clustering": [
+                "\\bibitem{ref4} Hastie T, Tibshirani R, Friedman J. The Elements of Statistical Learning. Springer, 2009.",
+                "\\bibitem{ref5} Jain A K. Data clustering: 50 years beyond K-means. Pattern Recognition Letters, 2010.",
             ],
         }
 

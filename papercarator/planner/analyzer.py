@@ -50,6 +50,9 @@ class TopicAnalyzer:
         "服务台": ["queueing_analysis", "stochastic_service"],
         "马尔可夫": ["markov_chain_analysis", "state_transition"],
         "转移概率": ["markov_chain_analysis", "state_transition"],
+        "博弈": ["game_theory", "nash_equilibrium"],
+        "纳什": ["game_theory", "nash_equilibrium"],
+        "Nash": ["game_theory", "nash_equilibrium"],
         "仿真": ["simulation", "monte_carlo"],
         "建模": ["mathematical_modeling", "differential_equations"],
         "数值": ["numerical_analysis", "finite_element"],
@@ -63,6 +66,9 @@ class TopicAnalyzer:
         "物流": ["network_flow", "resource_allocation"],
         "图像": ["image_processing", "computer_vision"],
         "控制": ["control_theory", "pid_control"],
+        "PID": ["control_theory", "pid_control"],
+        "聚类": ["clustering", "unsupervised_learning"],
+        "K-means": ["clustering", "unsupervised_learning"],
     }
 
     # 应用领域关键词映射
@@ -87,6 +93,12 @@ class TopicAnalyzer:
         ("review", ["综述", "回顾", "survey", "review"]),
         ("queueing", ["排队", "服务台", "排队系统", "到达率", "queueing", "queueing system", "service queue"]),
         ("markov_chain", ["马尔可夫", "状态转移", "转移概率", "markov chain", "state transition"]),
+        ("game_theory", ["博弈", "博弈论", "纳什", "Nash", "nash", "均衡", "对策", "game theory"]),
+        ("control_theory", ["PID", "pid", "控制系统", "控制器", "反馈", "LQR", "lqr", "最优控制", "control theory"]),
+        ("clustering", ["聚类", "K-means", "k-means", "层次聚类", "clustering", "分群", "数据挖掘"]),
+        ("bayesian", ["贝叶斯", "Bayesian", "bayesian", "先验", "后验", "概率推断"]),
+        ("graph_theory", ["图论", "最小生成树", "连通性", "graph theory", "MST", "拓扑"]),
+        ("fuzzy_logic", ["模糊", "fuzzy", "隶属函数", "模糊推理", "模糊控制"]),
         ("multi_objective", ["多目标", "帕累托", "pareto", "multi-objective"]),
         ("pde", ["偏微分", "热方程", "扩散方程", "二维热传导", "pde", "partial differential"]),
         ("network_flow", ["最短路径", "网络流", "物流网络", "配送网络", "路径规划", "network flow", "shortest path"]),
@@ -147,19 +159,50 @@ class TopicAnalyzer:
         return result
 
     def _extract_keywords(self, analysis: TopicAnalysis) -> None:
-        """提取关键词"""
-        # 简单分词提取（实际项目中可使用jieba等中文分词库）
+        """提取关键词 - 优先提取领域专有名词，避免泛化词"""
         topic = analysis.topic
-        # 基于常见学术词汇提取
-        common_keywords = [
-            "算法", "模型", "系统", "方法", "优化", "设计", "分析",
-            "基于", "研究", "应用", "实现", "改进", "创新",
+
+        # 领域专有名词（高优先级）
+        domain_terms = [
+            "排队", "服务台", "马尔可夫", "博弈", "纳什", "PID", "聚类",
+            "K-means", "偏微分", "热方程", "扩散", "网络流", "最短路径",
+            "时间序列", "预测", "帕累托", "多目标", "微分方程", "控制",
+            "优化", "回归", "统计", "方程组", "线性规划", "非线性",
+            "供应链", "物流", "交通", "金融", "医疗", "能源",
+            "收敛", "稳定性", "均衡", "概率", "转移", "稳态",
+            "等待时间", "到达率", "服务率", "利用率", "队长",
+            "梯度", "约束", "目标函数", "决策变量", "仿真",
         ]
-        keywords = [kw for kw in common_keywords if kw in topic]
-        # 添加题目中的名词性短语（简化版）
-        analysis.keywords = list(set(keywords))
+
+        # 英文术语
+        english_terms = [
+            "optimization", "queueing", "markov", "Nash", "PID", "PDE",
+            "ODE", "clustering", "regression", "forecast", "pareto",
+            "network flow", "time series", "game theory", "control",
+            "LQR", "ARIMA", "Monte Carlo", "M/M/c", "M/M/1",
+        ]
+
+        keywords = []
+        for term in domain_terms:
+            if term in topic:
+                keywords.append(term)
+        for term in english_terms:
+            if term.lower() in topic.lower():
+                keywords.append(term)
+
+        # 如果专有名词不够，补充通用词但标记为次要
+        if len(keywords) < 2:
+            generic_fallback = [
+                "算法", "模型", "系统", "方法", "设计", "分析",
+                "基于", "研究", "应用", "实现", "改进",
+            ]
+            for kw in generic_fallback:
+                if kw in topic and kw not in keywords:
+                    keywords.append(kw)
+
+        analysis.keywords = list(dict.fromkeys(keywords))  # 去重保序
         if not analysis.keywords:
-            analysis.keywords = ["建模", "分析"]
+            analysis.keywords = ["数学建模", "数值分析"]
 
     def _identify_methods(self, analysis: TopicAnalysis) -> None:
         """识别研究方法"""
@@ -209,6 +252,12 @@ class TopicAnalyzer:
             tools.update(["numpy", "scipy.optimize"])
         if analysis.paper_type == "time_series":
             tools.update(["numpy", "scipy", "statistics"])
+        if analysis.paper_type == "game_theory":
+            tools.update(["numpy", "scipy.optimize", "linear_programming"])
+        if analysis.paper_type == "control_theory":
+            tools.update(["numpy", "scipy", "control_analysis"])
+        if analysis.paper_type == "clustering":
+            tools.update(["numpy", "unsupervised_learning", "distance_metrics"])
         # 基于方法
         for method in analysis.research_methods:
             if "neural" in method:
@@ -238,6 +287,12 @@ class TopicAnalyzer:
             viz.extend(["queue_curve", "heatmap"])
         if analysis.paper_type == "markov_chain":
             viz.extend(["state_graph", "heatmap", "3d_model"])
+        if analysis.paper_type == "game_theory":
+            viz.extend(["payoff_heatmap", "strategy_bar"])
+        if analysis.paper_type == "control_theory":
+            viz.extend(["step_response", "stability_summary"])
+        if analysis.paper_type == "clustering":
+            viz.extend(["cluster_scatter", "centroid_plot"])
         if any(m in analysis.research_methods for m in ["neural_network", "deep_learning"]):
             viz.append("network_graph")
         if analysis.application_domain == "mechanical_engineering":
@@ -272,7 +327,7 @@ class TopicAnalyzer:
     def _assess_difficulty(self, analysis: TopicAnalysis) -> None:
         """评估难度"""
         topic = analysis.topic
-        hard_indicators = ["深度学习", "神经网络", "多目标优化", "非线性", "偏微分方程"]
+        hard_indicators = ["深度学习", "神经网络", "多目标优化", "非线性", "偏微分方程", "博弈", "最优控制"]
         easy_indicators = ["综述", "介绍", "概述", "survey"]
         if any(w in topic for w in hard_indicators):
             analysis.difficulty = "hard"
@@ -282,7 +337,87 @@ class TopicAnalyzer:
             analysis.difficulty = "medium"
 
     def _llm_enhance(self, analysis: TopicAnalysis) -> TopicAnalysis:
-        """使用LLM增强分析结果"""
-        # TODO: 集成LLM API进行更智能的分析
-        logger.info("LLM增强分析 (待实现)")
+        """使用LLM增强分析结果。
+
+        当 use_llm=True 时，尝试调用外部LLM API对规则分析结果进行增强：
+        - 更精确的关键词提取
+        - 更合理的研究方法识别
+        - 更准确的难度评估
+        - 补充模型参数建议
+
+        如果LLM调用失败，静默回退到规则分析结果。
+        """
+        try:
+            import httpx
+
+            api_base = getattr(self, '_llm_api_base', None)
+            api_key = getattr(self, '_llm_api_key', None)
+            model = getattr(self, '_llm_model', 'gpt-4o-mini')
+
+            if not api_base:
+                logger.info("LLM API base not configured, skipping enhancement")
+                return analysis
+
+            prompt = f"""分析以下数学建模论文题目，返回JSON格式：
+题目: {analysis.topic}
+当前分析:
+- 论文类型: {analysis.paper_type}
+- 关键词: {analysis.keywords}
+- 难度: {analysis.difficulty}
+- 方法: {analysis.research_methods}
+
+请返回更精确的分析结果（JSON格式）：
+{{
+  "keywords": ["更精确的关键词列表"],
+  "difficulty": "easy/medium/hard",
+  "suggested_model_params": {{"参数名": 数值}},
+  "improved_methods": ["更准确的研究方法"]
+}}"""
+
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+
+            response = httpx.post(
+                f"{api_base}/chat/completions",
+                json={
+                    "model": model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.3,
+                    "max_tokens": 500,
+                },
+                headers=headers,
+                timeout=30,
+            )
+
+            if response.status_code == 200:
+                import json
+                content = response.json()["choices"][0]["message"]["content"]
+                # Extract JSON from response
+                json_match = content
+                if "```json" in content:
+                    json_match = content.split("```json")[1].split("```")[0]
+                elif "```" in content:
+                    json_match = content.split("```")[1].split("```")[0]
+
+                enhanced = json.loads(json_match.strip())
+
+                if "keywords" in enhanced and enhanced["keywords"]:
+                    analysis.keywords = enhanced["keywords"]
+                if "difficulty" in enhanced:
+                    analysis.difficulty = enhanced["difficulty"]
+                if "improved_methods" in enhanced and enhanced["improved_methods"]:
+                    analysis.research_methods = enhanced["improved_methods"]
+                if "suggested_model_params" in enhanced:
+                    analysis.metadata["llm_suggested_params"] = enhanced["suggested_model_params"]
+
+                logger.info("LLM增强分析完成")
+            else:
+                logger.warning(f"LLM API返回 {response.status_code}，使用规则分析结果")
+
+        except ImportError:
+            logger.info("httpx 未安装，跳过LLM增强")
+        except Exception as e:
+            logger.warning(f"LLM增强失败，使用规则分析结果: {e}")
+
         return analysis

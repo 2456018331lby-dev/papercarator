@@ -49,6 +49,12 @@ class ModelSolver:
             "time_series": self._solve_time_series,
             "queueing": self._solve_queueing,
             "markov_chain": self._solve_markov_chain,
+            "game_theory": self._solve_game_theory,
+            "control_theory": self._solve_control_theory,
+            "clustering": self._solve_clustering,
+            "bayesian": self._solve_bayesian,
+            "graph_theory": self._solve_graph_theory,
+            "fuzzy_logic": self._solve_fuzzy_logic,
         }
         logger.info(f"初始化 ModelSolver (timeout={timeout}s, MATLAB={self._matlab_available})")
 
@@ -805,3 +811,394 @@ class ModelSolver:
                 success=False,
                 message=f"马尔可夫链求解异常: {str(e)}",
             )
+
+    def _solve_game_theory(self, model: MathModel) -> Solution:
+        """求解双人零和博弈的Nash均衡（简化为线性规划）"""
+        logger.info("求解博弈论Nash均衡模型...")
+
+        try:
+            payoff_matrix = np.array(model.metadata.get("payoff_matrix", []), dtype=float)
+            if payoff_matrix.size == 0:
+                return Solution(success=False, message="收益矩阵为空")
+
+            n_strategies = payoff_matrix.shape[1]
+            player_a_payoff = payoff_matrix
+
+            # 对B来说，收益是 -A的收益（零和）
+            player_b_payoff = -payoff_matrix
+
+            # 简化为数值解：计算博弈值（使用最小最大定理）
+            # A 的最优策略 = 最大化最小收益
+            # B 的最优策略 = 最小化最大收益
+            from scipy import optimize
+
+            # 求解 A 的最大最小策略（线性规划）
+            n = n_strategies
+            c = np.ones(n)
+            Aub = -player_a_payoff.T  # 约束：每个纯策略的期望收益 >= v
+            bub = -np.ones(n_strategies)
+            bounds = [(0, 1) for _ in range(n)]
+
+            result = optimize.linprog(c, A_ub=Aub, b_ub=bub, bounds=bounds, method="highs")
+            strategy_a = result.x / result.x.sum() if result.success else np.ones(n) / n
+            game_value = float(np.dot(strategy_a, player_a_payoff.min(axis=1)))
+
+            # 最佳响应分析
+            best_response_b = player_b_payoff.min(axis=0)
+            best_response_a = player_a_payoff.max(axis=1)
+
+            values = {
+                f"strategy_A_{i+1}": float(strategy_a[i]) for i in range(len(strategy_a))
+            }
+            values["game_value"] = game_value
+
+            return Solution(
+                success=True,
+                values=values,
+                message="Nash均衡求解成功",
+                numerical_data={
+                    "payoff_matrix": payoff_matrix.tolist(),
+                    "best_response_B": best_response_b.tolist(),
+                    "best_response_A": best_response_a.tolist(),
+                    "strategy_A": strategy_a.tolist(),
+                },
+                statistics={
+                    "game_value": game_value,
+                    "nash_gap": float(np.max(best_response_a) - np.min(best_response_b)) / 2,
+                },
+                metadata={"method": "zero_sum_linear_programming"},
+            )
+
+        except Exception as e:
+            return Solution(
+                success=False,
+                message=f"博弈论求解异常: {str(e)}",
+            )
+
+    def _solve_control_theory(self, model: MathModel) -> Solution:
+        """求解PID控制系统稳定性分析。"""
+        logger.info("求解控制理论模型...")
+
+        try:
+            a = float(model.parameters.get("a", 2.0))
+            b = float(model.parameters.get("b", 1.0))
+            Kp = float(model.parameters.get("Kp", 1.0))
+            Ki = float(model.parameters.get("Ki", 0.5))
+            Kd = float(model.parameters.get("Kd", 0.0))
+
+            # 特征方程: s^2 + (a + Kp)*s + (b + Ki) = 0
+            # 稳定性条件: 所有系数 > 0
+            coeff1 = a + Kp
+            coeff2 = b + Ki
+
+            # 稳定性判据
+            is_stable = coeff1 > 0 and coeff2 > 0
+
+            # 特征根
+            discriminant = coeff1**2 - 4 * coeff2
+            if discriminant >= 0:
+                r1 = (-coeff1 + np.sqrt(discriminant)) / 2
+                r2 = (-coeff1 - np.sqrt(discriminant)) / 2
+            else:
+                real_part = -coeff1 / 2
+                imag_part = np.sqrt(-discriminant) / 2
+                r1 = complex(real_part, imag_part)
+                r2 = complex(real_part, -imag_part)
+
+            # 阶跃响应（数值仿真）
+            t = np.linspace(0, 10, 500)
+            dt = t[1] - t[0]
+            y_response = np.zeros_like(t)
+            dy = 0.0
+            y = 0.0
+            for i in range(len(t)):
+                # 简化：使用二阶系统的解析解作为近似
+                omega_n = np.sqrt(coeff2)
+                damping = coeff1 / (2 * omega_n)
+                if discriminant >= 0:
+                    y_response[i] = 1 - (r1 * np.exp(r2 * t[i]) - r2 * np.exp(r1 * t[i])) / (r1 - r2)
+                else:
+                    y_response[i] = 1 - np.exp(-coeff1 * t[i] / 2) * (
+                        np.cos(np.sqrt(-discriminant) * t[i] / 2) +
+                        coeff1 / np.sqrt(-discriminant) * np.sin(np.sqrt(-discriminant) * t[i] / 2)
+                    )
+
+            values = {
+                "Kp": Kp, "Ki": Ki, "Kd": Kd,
+                "coeff1": coeff1, "coeff2": coeff2,
+                "damping_ratio": coeff1 / (2 * np.sqrt(coeff2)) if coeff2 > 0 else 0,
+            }
+
+            return Solution(
+                success=True,
+                values=values,
+                message="控制系统稳定性分析成功" if is_stable else "系统不稳定",
+                numerical_data={
+                    "t": t.tolist(),
+                    "step_response": y_response.tolist(),
+                    "discriminant": float(discriminant),
+                },
+                statistics={
+                    "is_stable": is_stable,
+                    "damping_ratio": float(coeff1 / (2 * np.sqrt(coeff2))) if coeff2 > 0 else 0,
+                    "natural_frequency": float(np.sqrt(coeff2)) if coeff2 > 0 else 0,
+                },
+                metadata={"method": "routh_hurwitz", "system_order": 2},
+            )
+
+        except Exception as e:
+            return Solution(
+                success=False,
+                message=f"控制理论求解异常: {str(e)}",
+            )
+
+    def _solve_clustering(self, model: MathModel) -> Solution:
+        """求解K-means聚类问题。"""
+        logger.info("求解聚类分析模型...")
+
+        try:
+            data = np.array(model.metadata.get("data", []), dtype=float)
+            n_clusters = int(model.parameters.get("n_clusters", 3))
+
+            if data.size == 0:
+                return Solution(success=False, message="数据为空")
+
+            # K-means 迭代
+            np.random.seed(42)
+            centroids = data[np.random.choice(len(data), n_clusters, replace=False)]
+
+            for iteration in range(50):
+                # 分配每个点到最近的中心
+                distances = np.linalg.norm(data[:, np.newaxis] - centroids, axis=2)
+                labels = np.argmin(distances, axis=1)
+
+                # 更新中心
+                new_centroids = np.array([
+                    data[labels == k].mean(axis=0) if np.any(labels == k) else centroids[k]
+                    for k in range(n_clusters)
+                ])
+
+                if np.linalg.norm(new_centroids - centroids) < 1e-4:
+                    centroids = new_centroids
+                    break
+                centroids = new_centroids
+
+            # 计算SSE
+            sse = float(np.sum((data - centroids[labels]) ** 2))
+
+            # 计算各簇的统计信息
+            cluster_stats = {}
+            for k in range(n_clusters):
+                cluster_points = data[labels == k]
+                if len(cluster_points) > 0:
+                    cluster_stats[f"cluster_{k}_size"] = len(cluster_points)
+                    cluster_stats[f"cluster_{k}_std"] = float(np.std(cluster_points))
+
+            values = {
+                f"centroid_{k}_x": float(centroids[k, 0]) for k in range(n_clusters)
+            }
+            values.update({
+                f"centroid_{k}_y": float(centroids[k, 1]) for k in range(n_clusters)
+            })
+            values["SSE"] = sse
+
+            return Solution(
+                success=True,
+                values=values,
+                message=f"K-means聚类求解成功 ({n_clusters} 簇)",
+                numerical_data={
+                    "data": data.tolist(),
+                    "labels": labels.tolist(),
+                    "centroids": centroids.tolist(),
+                },
+                statistics={
+                    "sse": sse,
+                    "n_clusters": n_clusters,
+                    **cluster_stats,
+                },
+                metadata={"method": "kmeans_lloyd", "iterations": iteration + 1},
+            )
+
+        except Exception as e:
+            return Solution(
+                success=False,
+                message=f"聚类分析求解异常: {str(e)}",
+            )
+
+    def _solve_bayesian(self, model: MathModel) -> Solution:
+        """求解贝叶斯推断模型。"""
+        logger.info("求解贝叶斯推断模型...")
+
+        try:
+            alpha_prior = float(model.parameters.get("alpha_prior", 2.0))
+            beta_prior = float(model.parameters.get("beta_prior", 2.0))
+            n_trials = int(model.parameters.get("n_trials", 50))
+            successes = int(model.parameters.get("successes", 32))
+
+            # Beta-Binomial 共轭更新
+            alpha_post = alpha_prior + successes
+            beta_post = beta_prior + (n_trials - successes)
+
+            # 后验均值和方差
+            post_mean = alpha_post / (alpha_post + beta_post)
+            post_var = (alpha_post * beta_post) / (
+                (alpha_post + beta_post) ** 2 * (alpha_post + beta_post + 1)
+            )
+
+            # 采样后验分布
+            np.random.seed(42)
+            samples = np.random.beta(alpha_post, beta_post, 1000)
+
+            x_plot = np.linspace(0, 1, 200)
+            from scipy.stats import beta as beta_dist
+            prior_pdf = beta_dist.pdf(x_plot, alpha_prior, beta_prior)
+            post_pdf = beta_dist.pdf(x_plot, alpha_post, beta_post)
+
+            values = {
+                "posterior_mean": float(post_mean),
+                "posterior_std": float(np.sqrt(post_var)),
+                "credible_interval_95_low": float(np.percentile(samples, 2.5)),
+                "credible_interval_95_high": float(np.percentile(samples, 97.5)),
+            }
+
+            return Solution(
+                success=True,
+                values=values,
+                message=f"贝叶斯推断成功 - 后验均值: {post_mean:.4f}",
+                numerical_data={
+                    "x": x_plot.tolist(),
+                    "prior_pdf": prior_pdf.tolist(),
+                    "posterior_pdf": post_pdf.tolist(),
+                    "samples": samples[:200].tolist(),
+                },
+                statistics={
+                    "alpha_posterior": float(alpha_post),
+                    "beta_posterior": float(beta_post),
+                    "posterior_mean": float(post_mean),
+                    "posterior_std": float(np.sqrt(post_var)),
+                },
+                metadata={"method": "beta_binomial_conjugate"},
+            )
+
+        except Exception as e:
+            return Solution(success=False, message=f"贝叶斯推断异常: {str(e)}")
+
+    def _solve_graph_theory(self, model: MathModel) -> Solution:
+        """求解图论模型（Kruskal最小生成树）。"""
+        logger.info("求解图论模型...")
+
+        try:
+            adj = np.array(model.metadata.get("adjacency_matrix", []), dtype=float)
+            n = adj.shape[0]
+            nodes = model.metadata.get("nodes", [f"V{i}" for i in range(n)])
+
+            # Kruskal MST
+            edges = []
+            for i in range(n):
+                for j in range(i + 1, n):
+                    if adj[i][j] > 0:
+                        edges.append((float(adj[i][j]), i, j))
+            edges.sort()
+
+            parent = list(range(n))
+
+            def find(x):
+                while parent[x] != x:
+                    parent[x] = parent[parent[x]]
+                    x = parent[x]
+                return x
+
+            mst_edges = []
+            mst_cost = 0.0
+            for cost, u, v in edges:
+                ru, rv = find(u), find(v)
+                if ru != rv:
+                    parent[ru] = rv
+                    mst_edges.append((nodes[u], nodes[v], cost))
+                    mst_cost += cost
+
+            values = {
+                "mst_cost": float(mst_cost),
+                "mst_edge_count": float(len(mst_edges)),
+                "n_nodes": float(n),
+            }
+
+            return Solution(
+                success=True,
+                values=values,
+                message=f"最小生成树求解成功 - 总代价: {mst_cost:.1f}, 边数: {len(mst_edges)}",
+                numerical_data={
+                    "adjacency": adj.tolist(),
+                    "mst_edges": [(u, v, c) for u, v, c in mst_edges],
+                    "nodes": nodes,
+                },
+                statistics={
+                    "mst_cost": float(mst_cost),
+                    "edge_count": len(mst_edges),
+                    "density": float(np.count_nonzero(adj) / (n * (n - 1))),
+                },
+                metadata={"method": "kruskal_mst"},
+            )
+
+        except Exception as e:
+            return Solution(success=False, message=f"图论求解异常: {str(e)}")
+
+    def _solve_fuzzy_logic(self, model: MathModel) -> Solution:
+        """求解模糊逻辑推理模型。"""
+        logger.info("求解模糊逻辑模型...")
+
+        try:
+            mf_params = model.metadata.get("membership_functions", {})
+            universe = model.metadata.get("universe", [0, 10])
+            x_range = np.linspace(universe[0], universe[1], 100)
+
+            def trimf(x, a, b, c):
+                """三角隶属函数。"""
+                return np.maximum(0, np.minimum((x - a) / (b - a + 1e-10), (c - x) / (c - b + 1e-10)))
+
+            # 计算各隶属函数
+            memberships = {}
+            for name, params in mf_params.items():
+                memberships[name] = trimf(
+                    x_range, params["a"], params["b"], params["c"]
+                )
+
+            # 简单推理：取输入值为5时的隶属度
+            test_input = 5.0
+            input_mf = {}
+            for name, params in mf_params.items():
+                input_mf[name] = float(trimf(
+                    np.array([test_input]), params["a"], params["b"], params["c"]
+                )[0])
+
+            # 重心法去模糊化（简化）
+            output_values = []
+            for name, degree in input_mf.items():
+                center = (mf_params[name]["a"] + mf_params[name]["b"] + mf_params[name]["c"]) / 3
+                output_values.append(degree * center)
+            defuzzified = sum(output_values) / (sum(input_mf.values()) + 1e-10)
+
+            values = {
+                "defuzzified_output": float(defuzzified),
+                **{f"mf_{k}": float(v) for k, v in input_mf.items()},
+            }
+
+            return Solution(
+                success=True,
+                values=values,
+                message=f"模糊推理完成 - 去模糊化输出: {defuzzified:.4f}",
+                numerical_data={
+                    "x": x_range.tolist(),
+                    "memberships": {k: v.tolist() for k, v in memberships.items()},
+                    "test_input": test_input,
+                    "input_memberships": input_mf,
+                },
+                statistics={
+                    "defuzzified": float(defuzzified),
+                    "n_rules": len(model.metadata.get("rules", [])),
+                },
+                metadata={"method": "mamdani_centroid"},
+            )
+
+        except Exception as e:
+            return Solution(success=False, message=f"模糊逻辑求解异常: {str(e)}")
