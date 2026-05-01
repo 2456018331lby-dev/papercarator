@@ -49,6 +49,8 @@ class TemplateManager:
             "packages": [
                 "amsmath", "amssymb", "graphicx", "booktabs",
                 "geometry", "hyperref", "xcolor", "ctex", "float",
+                "algorithm", "algorithmic", "listings", "subcaption",
+                "multirow", "longtable",
             ],
         },
     }

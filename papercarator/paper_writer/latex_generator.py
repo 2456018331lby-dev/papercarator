@@ -24,11 +24,40 @@ class LaTeXGenerator:
                  latex_compiler: str = "xelatex"):
         self.template_manager = template_manager or TemplateManager()
         self.section_writer = section_writer or SectionWriter()
-        self.latex_compiler = latex_compiler
+        self.latex_compiler = self._detect_latex_compiler(latex_compiler)
         self.algorithm_writer = AlgorithmWriter()
         self.academic_enhancer = AcademicEnhancer()
         self.quality_scorer = PaperQualityScorer()
-        logger.info(f"初始化 LaTeXGenerator (编译器: {latex_compiler})")
+        logger.info(f"初始化 LaTeXGenerator (编译器: {self.latex_compiler})")
+
+    @staticmethod
+    def _detect_latex_compiler(compiler: str) -> str:
+        """检测可用的LaTeX编译器，支持WSL环境。"""
+        import shutil
+        import os
+
+        # 先检查PATH中是否有
+        if shutil.which(compiler):
+            return compiler
+
+        # WSL环境：尝试Windows MiKTeX路径
+        wsl_miktex = "/mnt/c/Users/24560/AppData/Local/Programs/MiKTeX/miktex/bin/x64/xelatex.exe"
+        if os.path.exists(wsl_miktex):
+            logger.info(f"WSL环境检测到MiKTeX: {wsl_miktex}")
+            return wsl_miktex
+
+        # 尝试常见Windows路径
+        for path in [
+            r"C:\Users\24560\AppData\Local\Programs\MiKTeX\miktex\bin\x64\xelatex.exe",
+            r"C:\texlive\2024\bin\win32\xelatex.exe",
+        ]:
+            wsl_path = "/mnt/" + path[0].lower() + path[2:].replace("\\", "/")
+            if os.path.exists(wsl_path):
+                logger.info(f"检测到LaTeX: {wsl_path}")
+                return wsl_path
+
+        logger.warning(f"未找到LaTeX编译器: {compiler}")
+        return compiler
 
     def generate(self, topic: str, plan: dict[str, Any],
                  math_model: dict[str, Any], solution: dict[str, Any],
@@ -233,16 +262,12 @@ class LaTeXGenerator:
     def _compile_latex(self, tex_path: Path, output_dir: Path) -> Path | None:
         """编译LaTeX为PDF"""
         logger.info(f"编译LaTeX: {tex_path}")
-        tex_filename = tex_path.name
-        output_dir_arg = str(output_dir.resolve())
 
         try:
             # 检查编译器是否可用
             result = subprocess.run(
                 [self.latex_compiler, "--version"],
-                capture_output=True,
-                text=False,
-                timeout=10,
+                capture_output=True, text=False, timeout=10,
             )
             stdout = self._decode_output(result.stdout)
             stderr = self._decode_output(result.stderr)
@@ -257,23 +282,38 @@ class LaTeXGenerator:
             logger.warning("编译器检查超时")
             return None
 
+        # 判断是否使用Windows编译器（WSL环境）
+        is_windows_compiler = self.latex_compiler.endswith(".exe")
+
+        if is_windows_compiler:
+            # Windows编译器需要Windows路径
+            tex_arg = str(tex_path).replace("/mnt/c/", "C:\\").replace("/", "\\")
+            out_arg = str(output_dir.resolve()).replace("/mnt/c/", "C:\\").replace("/", "\\")
+        else:
+            tex_filename = tex_path.name
+            out_arg = str(output_dir.resolve())
+            tex_arg = tex_filename
+
         # 编译（多次编译以解决引用）
         for i in range(2):
             try:
+                if is_windows_compiler:
+                    cmd = [self.latex_compiler, "-interaction=nonstopmode",
+                           "-output-directory", out_arg, tex_arg]
+                    cwd = None
+                else:
+                    cmd = [self.latex_compiler, "-interaction=nonstopmode",
+                           "-output-directory", out_arg, tex_arg]
+                    cwd = str(tex_path.parent)
+
                 result = subprocess.run(
-                    [self.latex_compiler, "-interaction=nonstopmode",
-                     "-output-directory", output_dir_arg,
-                     tex_filename],
-                    capture_output=True,
-                    text=False,
-                    timeout=120,
-                    cwd=str(tex_path.parent),
+                    cmd, capture_output=True, text=False,
+                    timeout=120, cwd=cwd,
                 )
                 stdout = self._decode_output(result.stdout)
                 stderr = self._decode_output(result.stderr)
                 if result.returncode != 0:
                     logger.warning(f"第{i+1}次编译有警告/错误")
-                    # 记录错误日志
                     log_path = output_dir / "compile.log"
                     with open(log_path, 'w', encoding='utf-8') as f:
                         f.write(stdout)
@@ -287,7 +327,7 @@ class LaTeXGenerator:
                 return None
 
         # 检查PDF是否生成
-        pdf_path = output_dir / tex_path.with_suffix(".pdf").name
+        pdf_path = output_dir / "paper.pdf"
         if pdf_path.exists():
             log_path = output_dir / "compile.log"
             if log_path.exists():
