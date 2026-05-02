@@ -29,10 +29,25 @@ from papercarator.github_publisher import GitHubPublisher
 
 
 def run(topic: str, output_dir: str = None, template: str = "custom",
-        data_file: str = None) -> dict:
+        data_file: str = None, paper_type_hint: str = None) -> dict:
     """Run the full paper generation pipeline. Returns summary dict."""
 
     start_time = time.time()
+
+    # Auto-detect paper type
+    from papercarator.paper_writer.paper_types import PaperType
+    paper_type = PaperType.detect_type(topic, paper_type_hint)
+    type_info = PaperType.get_type(paper_type)
+
+    # Auto-select template from paper type
+    if template == "custom":
+        cite_fmt = type_info.get("citation_format", "custom")
+        if paper_type == "thesis":
+            template = "custom"  # thesis uses ThesisStructure, not template
+        elif cite_fmt == "ieee":
+            template = "ieee"
+        elif cite_fmt == "gbt7714":
+            template = "custom"
 
     # Load external data if provided
     imported_data = None
@@ -119,6 +134,8 @@ def run(topic: str, output_dir: str = None, template: str = "custom",
     summary = {
         "success": True,
         "topic": topic,
+        "paper_type": paper_type,
+        "paper_type_name": type_info.get("name", ""),
         "model_type": model_info.get("model_type", "unknown"),
         "model_name": model_info.get("name", ""),
         "keywords": plan.get("keywords", []),
@@ -221,9 +238,10 @@ def main():
                         choices=["custom", "ieee", "acm", "cjm", "springer_lncs", "thesis"],
                         help="LaTeX template (default: custom)")
     parser.add_argument("--data", "-d", help="Data file path (CSV/Excel/JSON) for real data modeling")
+    parser.add_argument("--type", help="Paper type hint: thesis/journal/conference/review/experiment/case_study/math_modeling")
     args = parser.parse_args()
 
-    summary = run(args.topic, args.output, args.template, args.data)
+    summary = run(args.topic, args.output, args.template, args.data, args.type)
 
     # Print JSON summary to stdout
     print(json.dumps(summary, ensure_ascii=False, indent=2))
