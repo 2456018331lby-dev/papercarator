@@ -3,7 +3,7 @@
 # 系统设置
 system:
   name: "PaperCarator"
-  version: "0.1.0"
+  version: "0.2.0"
   log_level: "INFO"
   output_dir: "./output"
   temp_dir: "./temp"

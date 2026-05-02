@@ -7,8 +7,9 @@ This document explains how to call PaperCarator as a reusable skill from Codex-l
 ## Supported workflow
 
 1. Provide a topic that fits a supported math-model family.
-2. Run the CLI with GitHub and VS Code side effects disabled unless explicitly needed.
-3. Collect:
+2. Run `python3.12 -m papercarator.cli analyze "<topic>"` when fit is uncertain.
+3. Run the CLI with GitHub and VS Code side effects disabled unless explicitly needed.
+4. Collect:
    - topic classification
    - model type
    - solver result
@@ -44,6 +45,11 @@ These presets keep the run focused on local artifact generation instead of exter
 - solver succeeds
 - PDF is generated
 - artifact set is coherent with the selected model family
+- generated sections reference the selected model and solver output, not only generic paper text
+
+### Degraded mode
+
+If classification returns `review`, `experimental`, `theoretical`, or generic `modeling`, treat the run as a modeling approximation. State the limitation before execution and prefer a narrower topic that names a model family, such as queueing, optimization, network flow, PDE, game theory, control theory, clustering, or time series.
 
 ## Current high-confidence model families
 
@@ -57,6 +63,9 @@ These presets keep the run focused on local artifact generation instead of exter
 - regression/statistical analysis
 - network flow / shortest path
 - time-series forecasting
+- game theory / Nash equilibrium
+- control theory / PID stability
+- clustering / K-means analysis
 
 ## Remaining integration gaps
 

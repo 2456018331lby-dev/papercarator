@@ -24,9 +24,12 @@ C:\Users\24560\Desktop\study\opendemo\papercarator
 - 已新增 `network_flow` 和 `time_series` 模型链路
 - 已新增 `multi_objective` 和 `pde` 模型链路
 - 已新增 `queueing` 和 `markov_chain` 模型链路
+- 已补齐 `game_theory`、`control_theory`、`clustering` 的分析入口、写作画像、图表生成和回归测试
 - 已补齐 `SKILL.md`、`CLAUDE.md`、`docs/skill_integration.md`
 - 已补齐 `configs/skill_codex.yaml`、`configs/skill_claude.yaml`
-- 73/73 测试通过
+- `SKILL.md` 已补齐 Codex skill frontmatter，并新增 analyze-first、降级模式和产物验收协议
+- 已新增 `tests/test_skill_assets.py`，锁定 skill frontmatter、调用协议和本地化预设
+- 当前最新测试基线为 `93/93` 通过
 - 已验证 demo 输出目录：`C:\Users\24560\Desktop\study\paperskilldemo`
 
 ### ⚠️ 需要修复（按优先级）
@@ -65,9 +68,12 @@ C:\Users\24560\Desktop\study\opendemo\papercarator
 
 3. **优先继续推进**：
    - 优先增强数学建模专用能力，不要先做开放域承诺
+   - 对不确定题目先运行 `python3.12 -m papercarator.cli analyze "<topic>"`，再决定是否完整生成
+   - 对 `review`、`experimental`、`theoretical`、泛化 `modeling` 结果明确标注“降级/近似”
    - 如果继续改论文写作模块，保持“无额外 LLM 依赖”的前提
    - 每次改动后同步更新 `HANDOVER.md` / `README.md` / `CHANGELOG.md`
    - 保持 `SKILL.md` / `CLAUDE.md` / `skill_*` 配置与真实能力一致
+   - 当前工作树里 `papercarator/math_modeling/` 和 `papercarator/visualization/chart_generator.py` 已有未提交修改，继续维护时避免无意覆盖
 
 ## 当前重点示例（题目分析优先级）
 
@@ -95,6 +101,9 @@ assert result["paper_type"] == "optimization"
 - [x] 示例流程能完整跑通生成论文流程
 - [x] CLI 在 Windows 终端可直接跑通
 - [x] Codex / Claude Code skill 调用资产已具备
+- [x] skill 调用协议已补齐：frontmatter、预分析、降级模式、产物验收
+- [x] `game_theory` / `control_theory` / `clustering` 不再作为 generic `modeling` 降级路径
+- [x] 在当前环境重跑全量测试并记录本轮最新基线：`93/93`
 - [ ] 数学建模专用能力继续扩展
 - [ ] README / HANDOVER / NEXT_AI_PROMPT 保持与真实状态一致
 
@@ -106,4 +115,4 @@ assert result["paper_type"] == "optimization"
 
 ---
 
-**开始工作前，先运行测试确认当前状态，然后优先修复LaTeX编译问题。**
+**开始工作前，先安装 `.[dev]` 并运行测试确认当前状态；不要重复处理已经修复的 LaTeX 编译兼容问题。**

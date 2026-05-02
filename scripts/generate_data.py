@@ -159,7 +159,15 @@ def main():
     args = parser.parse_args()
 
     result = generate(args.topic, args.output, args.data)
+
+    # Auto-save context.json to output dir
+    out_dir = Path(result["output_dir"])
+    ctx_path = out_dir / "context.json"
+    ctx_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # Also print to stdout
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(f"\n# Context saved to: {ctx_path}", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -96,6 +96,30 @@ class TestTopicAnalyzer:
         assert result["paper_type"] == "markov_chain"
         assert "state_graph" in result["required_visualizations"]
 
+    def test_analyze_game_theory(self):
+        """测试博弈论类题目"""
+        analyzer = TopicAnalyzer()
+        result = analyzer.analyze("双人零和博弈的纳什均衡建模分析")
+
+        assert result["paper_type"] == "game_theory"
+        assert "payoff_heatmap" in result["required_visualizations"]
+
+    def test_analyze_control_theory(self):
+        """测试控制理论类题目"""
+        analyzer = TopicAnalyzer()
+        result = analyzer.analyze("PID控制系统稳定性分析与参数整定")
+
+        assert result["paper_type"] == "control_theory"
+        assert "step_response" in result["required_visualizations"]
+
+    def test_analyze_clustering(self):
+        """测试聚类分析类题目"""
+        analyzer = TopicAnalyzer()
+        result = analyzer.analyze("基于K-means的客户聚类分析")
+
+        assert result["paper_type"] == "clustering"
+        assert "cluster_scatter" in result["required_visualizations"]
+
 
 class TestTaskPlanner:
     """测试任务规划器"""

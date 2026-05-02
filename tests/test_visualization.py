@@ -222,6 +222,58 @@ class TestChartGenerator:
         files = gen.generate(math_model, solution, tmp_path)
         assert len(files) > 0
 
+    def test_generate_game_theory(self, tmp_path):
+        """测试博弈论图表生成"""
+        gen = ChartGenerator()
+
+        math_model = {"model_type": "game_theory", "name": "测试博弈论"}
+        solution = {
+            "success": True,
+            "values": {"strategy_A_1": 0.4, "strategy_A_2": 0.35, "strategy_A_3": 0.25},
+            "numerical_data": {
+                "payoff_matrix": [[3.0, 0.0, 4.0], [2.0, 4.0, 1.0], [0.0, 3.0, 2.0]],
+                "strategy_A": [0.4, 0.35, 0.25],
+            },
+        }
+
+        files = gen.generate(math_model, solution, tmp_path)
+        assert len(files) > 0
+
+    def test_generate_control_theory(self, tmp_path):
+        """测试控制理论图表生成"""
+        gen = ChartGenerator()
+
+        math_model = {"model_type": "control_theory", "name": "测试控制理论"}
+        solution = {
+            "success": True,
+            "numerical_data": {
+                "t": [0.0, 0.5, 1.0, 1.5],
+                "step_response": [0.0, 0.45, 0.78, 0.93],
+            },
+            "statistics": {"is_stable": True, "damping_ratio": 0.7, "natural_frequency": 1.2},
+        }
+
+        files = gen.generate(math_model, solution, tmp_path)
+        assert len(files) > 0
+
+    def test_generate_clustering(self, tmp_path):
+        """测试聚类分析图表生成"""
+        gen = ChartGenerator()
+
+        math_model = {"model_type": "clustering", "name": "测试聚类"}
+        solution = {
+            "success": True,
+            "numerical_data": {
+                "data": [[0.0, 0.1], [0.2, 0.0], [3.0, 3.1], [3.2, 3.0]],
+                "labels": [0, 0, 1, 1],
+                "centroids": [[0.1, 0.05], [3.1, 3.05]],
+            },
+            "statistics": {"sse": 0.12, "n_clusters": 2},
+        }
+
+        files = gen.generate(math_model, solution, tmp_path)
+        assert len(files) > 0
+
 
 class TestModel3DGenerator:
     """测试3D模型生成器"""

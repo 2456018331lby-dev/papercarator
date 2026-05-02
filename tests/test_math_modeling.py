@@ -86,6 +86,30 @@ class TestModelBuilder:
         assert model.model_type == "markov_chain"
         assert len(model.metadata.get("transition_matrix", [])) > 0
 
+    def test_build_game_theory(self):
+        """测试博弈论模型构建"""
+        builder = ModelBuilder()
+        model = builder.build("双人零和博弈的纳什均衡分析", {"paper_type": "game_theory"})
+
+        assert model.model_type == "game_theory"
+        assert len(model.metadata.get("payoff_matrix", [])) > 0
+
+    def test_build_control_theory(self):
+        """测试控制理论模型构建"""
+        builder = ModelBuilder()
+        model = builder.build("PID控制系统稳定性分析", {"paper_type": "control_theory"})
+
+        assert model.model_type == "control_theory"
+        assert model.parameters.get("system_order", 0) > 0
+
+    def test_build_clustering(self):
+        """测试聚类分析模型构建"""
+        builder = ModelBuilder()
+        model = builder.build("基于K-means的客户聚类分析", {"paper_type": "clustering"})
+
+        assert model.model_type == "clustering"
+        assert len(model.metadata.get("data", [])) > 0
+
 
 class TestModelSolver:
     """测试模型求解器"""
@@ -205,6 +229,42 @@ class TestModelSolver:
         assert solution.success
         assert "distributions" in solution.numerical_data
         assert "stationary_gap" in solution.statistics
+
+    def test_solve_game_theory(self):
+        """测试博弈论模型求解"""
+        builder = ModelBuilder()
+        solver = ModelSolver()
+
+        model = builder.build("双人零和博弈的纳什均衡分析", {"paper_type": "game_theory"})
+        solution = solver.solve(model)
+
+        assert solution.success
+        assert "game_value" in solution.statistics
+        assert "payoff_matrix" in solution.numerical_data
+
+    def test_solve_control_theory(self):
+        """测试控制理论模型求解"""
+        builder = ModelBuilder()
+        solver = ModelSolver()
+
+        model = builder.build("PID控制系统稳定性分析", {"paper_type": "control_theory"})
+        solution = solver.solve(model)
+
+        assert solution.success
+        assert "is_stable" in solution.statistics
+        assert "step_response" in solution.numerical_data
+
+    def test_solve_clustering(self):
+        """测试聚类分析模型求解"""
+        builder = ModelBuilder()
+        solver = ModelSolver()
+
+        model = builder.build("基于K-means的客户聚类分析", {"paper_type": "clustering"})
+        solution = solver.solve(model)
+
+        assert solution.success
+        assert "sse" in solution.statistics
+        assert "centroids" in solution.numerical_data
 
 
 class TestModelValidator:

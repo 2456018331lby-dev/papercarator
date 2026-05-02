@@ -15,7 +15,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class SystemConfig(BaseModel):
     """系统基础配置"""
     name: str = "PaperCarator"
-    version: str = "0.1.0"
+    version: str = "0.2.0"
     log_level: str = "INFO"
     output_dir: Path = Path("./output")
     temp_dir: Path = Path("./temp")

@@ -21,6 +21,9 @@ PaperCarator 当前更准确的定位是：
   - 统计回归
   - 网络流 / 最短路径
   - 时间序列预测
+  - 博弈论 / 纳什均衡
+  - 控制理论 / PID 稳定性
+  - 聚类分析 / K-means
 - **结果求解与验证**：自动调用 SymPy / SciPy 完成求解并输出结果摘要
 - **可视化生成**：自动生成二维图表和数学型三维示意
 - **论文输出**：自动生成摘要、方法、实验、结果、结论，并编译 LaTeX/PDF
@@ -70,13 +73,12 @@ python3.12 -m papercarator.cli --help
 
 ## 已验证状态
 
-- 全量测试已通过
+- 最新全量测试已通过
 - `examples/basic_usage.py` 可跑通
 - `python3.12 -m papercarator.cli run ...` 可在 Windows 终端跑通
 - PDF 可生成
 - 论文写作模块已改为**按模型类型生成内容**，不再所有题目都套同一份优化叙事
-- 当前测试基线：`73/73` 通过
-- 当前测试基线已提升：`73/73` 通过
+- 当前测试基线：`93/93` 通过
 - 已完成真实 demo 输出：
   - 输出目录：`C:\Users\24560\Desktop\study\paperskilldemo`
   - 示例题目：`多服务台排队系统性能分析与等待时间优化研究`
@@ -91,6 +93,13 @@ For downstream agent invocation, the repo now includes:
 - [docs/skill_integration.md](/C:/Users/24560/Desktop/study/opendemo/papercarator/docs/skill_integration.md)
 - [configs/skill_codex.yaml](/C:/Users/24560/Desktop/study/opendemo/papercarator/configs/skill_codex.yaml)
 - [configs/skill_claude.yaml](/C:/Users/24560/Desktop/study/opendemo/papercarator/configs/skill_claude.yaml)
+
+Recommended agent flow:
+
+1. Use `python3.12 -m papercarator.cli analyze "<topic>"` when topic fit is uncertain.
+2. Run `python3.12 -m papercarator.cli run "<topic>" --output <target_dir> --no-github --no-vscode`.
+3. Verify `paper.tex`, `paper.pdf`, charts, and any expected 3D visualization.
+4. If the topic is review/open-domain/citation-heavy, label the output as a modeling approximation instead of publication-ready research.
 
 ## 后续方向
 

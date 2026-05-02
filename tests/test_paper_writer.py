@@ -84,6 +84,28 @@ class TestSectionWriter:
         assert "\\end{{table}}}}" not in results
         assert "统计回归模型" in results
 
+    @pytest.mark.parametrize(
+        ("model_type", "expected_label"),
+        [
+            ("game_theory", "博弈论模型"),
+            ("control_theory", "控制理论模型"),
+            ("clustering", "聚类分析模型"),
+        ],
+    )
+    def test_write_methodology_for_new_model_profiles(self, model_type, expected_label):
+        """测试新增模型类型不会回退到方程组写作画像"""
+        writer = SectionWriter()
+
+        methodology = writer._write_methodology(
+            "测试题目",
+            {"research_methods": ["mathematical_modeling"]},
+            {"model_type": model_type, "name": "测试模型"},
+            {"success": True, "statistics": {"score": 1.0}},
+        )
+
+        assert expected_label in methodology
+        assert "方程组模型" not in methodology
+
 
 class TestLaTeXGenerator:
     """测试 LaTeX 生成器"""

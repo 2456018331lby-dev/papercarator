@@ -19,8 +19,19 @@ Prefer topics that map cleanly to:
 - statistical regression
 - network flow / shortest path
 - time-series forecasting
+- game theory / Nash equilibrium
+- control theory / PID stability
+- clustering / K-means analysis
 
 ## Recommended command
+
+If topic fit is uncertain, classify first:
+
+```bash
+python3.12 -m papercarator.cli analyze "<topic>"
+```
+
+Continue only when the reported `paper_type` is one of the supported math-model families, or explicitly describe the modeling approximation being made.
 
 ```bash
 python3.12 -m papercarator.cli run "<topic>" --output <target_dir> --no-github --no-vscode
@@ -39,6 +50,7 @@ After running, check:
 - `paper/paper.tex` exists
 - at least one chart exists
 - at least one 3D visualization exists when the topic calls for it
+- generated sections discuss the selected model family rather than a generic paper outline
 
 ## Known boundary
 
@@ -48,3 +60,5 @@ The generated paper is best treated as:
 - a strong structured first draft
 - a math-modeling report artifact
 - a demonstration of a model-selection and generation pipeline
+
+If the topic is primarily a literature review, open-domain research question, or citation-heavy academic paper, do not claim full support. Ask for a mathematical modeling angle or run only a clearly labeled approximation.

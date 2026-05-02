@@ -83,6 +83,18 @@ class ChartGenerator:
             files = self._plot_markov_chain(math_model, solution, output_dir)
             generated_files.extend(files)
 
+        elif model_type == "game_theory":
+            files = self._plot_game_theory(math_model, solution, output_dir)
+            generated_files.extend(files)
+
+        elif model_type == "control_theory":
+            files = self._plot_control_theory(math_model, solution, output_dir)
+            generated_files.extend(files)
+
+        elif model_type == "clustering":
+            files = self._plot_clustering(math_model, solution, output_dir)
+            generated_files.extend(files)
+
         logger.info(f"图表生成完成 - 共 {len(generated_files)} 个文件")
         return generated_files
 
@@ -594,6 +606,149 @@ class ChartGenerator:
         fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
         plt.close(fig)
         files.append(filepath)
+
+        return files
+
+    def _plot_game_theory(self, math_model: dict[str, Any],
+                          solution: dict[str, Any], output_dir: Path) -> list[Path]:
+        """绘制博弈论收益矩阵和策略分布。"""
+        files = []
+        numerical = solution.get("numerical_data", {})
+        matrix = np.array(numerical.get("payoff_matrix", []), dtype=float)
+
+        if matrix.size:
+            fig, ax = plt.subplots(figsize=(7, 5))
+            im = ax.imshow(matrix, cmap="coolwarm", aspect="auto")
+            ax.set_xlabel("Player B Strategy", fontsize=12)
+            ax.set_ylabel("Player A Strategy", fontsize=12)
+            ax.set_title("Game Payoff Matrix", fontsize=14, fontweight="bold")
+            for i in range(matrix.shape[0]):
+                for j in range(matrix.shape[1]):
+                    ax.text(j, i, f"{matrix[i, j]:.1f}", ha="center", va="center", color="black")
+            plt.colorbar(im, ax=ax, label="Payoff")
+
+            filepath = output_dir / "game_payoff_matrix.png"
+            fig.tight_layout()
+            fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
+            plt.close(fig)
+            files.append(filepath)
+
+        strategy = numerical.get("strategy_A") or [
+            value for key, value in sorted(solution.get("values", {}).items())
+            if key.startswith("strategy_A_")
+        ]
+        if strategy:
+            fig, ax = plt.subplots(figsize=(8, 5))
+            labels = [f"A{i + 1}" for i in range(len(strategy))]
+            ax.bar(labels, strategy, color=plt.cm.PuOr(np.linspace(0.2, 0.8, len(strategy))))
+            ax.set_ylim(0, max(1.0, max(strategy) * 1.2))
+            ax.set_xlabel("Strategy", fontsize=12)
+            ax.set_ylabel("Probability", fontsize=12)
+            ax.set_title("Mixed Strategy Distribution", fontsize=14, fontweight="bold")
+            ax.grid(axis="y", alpha=0.3)
+
+            filepath = output_dir / "game_strategy_distribution.png"
+            fig.tight_layout()
+            fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
+            plt.close(fig)
+            files.append(filepath)
+
+        return files
+
+    def _plot_control_theory(self, math_model: dict[str, Any],
+                             solution: dict[str, Any], output_dir: Path) -> list[Path]:
+        """绘制控制系统阶跃响应和稳定性指标。"""
+        files = []
+        numerical = solution.get("numerical_data", {})
+        stats = solution.get("statistics", {})
+
+        t = np.array(numerical.get("t", []), dtype=float)
+        response = np.array(numerical.get("step_response", []), dtype=float)
+        if t.size and response.size:
+            fig, ax = plt.subplots(figsize=self.figsize)
+            ax.plot(t, response, color="steelblue", linewidth=2, label="Step Response")
+            ax.axhline(1.0, color="black", linestyle="--", linewidth=1, alpha=0.6, label="Reference")
+            ax.set_xlabel("Time", fontsize=12)
+            ax.set_ylabel("Output", fontsize=12)
+            ax.set_title("Control System Step Response", fontsize=15, fontweight="bold")
+            ax.grid(alpha=0.3)
+            ax.legend()
+
+            filepath = output_dir / "control_step_response.png"
+            fig.tight_layout()
+            fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
+            plt.close(fig)
+            files.append(filepath)
+
+        if stats:
+            labels = ["damping_ratio", "natural_frequency"]
+            values = [float(stats.get(label, 0.0)) for label in labels]
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.bar(labels, values, color=["seagreen", "darkorange"])
+            ax.set_title(
+                f"Control Stability Metrics (stable={stats.get('is_stable', 'N/A')})",
+                fontsize=14,
+                fontweight="bold",
+            )
+            ax.grid(axis="y", alpha=0.3)
+
+            filepath = output_dir / "control_stability_metrics.png"
+            fig.tight_layout()
+            fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
+            plt.close(fig)
+            files.append(filepath)
+
+        return files
+
+    def _plot_clustering(self, math_model: dict[str, Any],
+                         solution: dict[str, Any], output_dir: Path) -> list[Path]:
+        """绘制聚类样本分布和聚类中心。"""
+        files = []
+        numerical = solution.get("numerical_data", {})
+        data = np.array(numerical.get("data", []), dtype=float)
+        labels = np.array(numerical.get("labels", []), dtype=int)
+        centroids = np.array(numerical.get("centroids", []), dtype=float)
+
+        if data.size and labels.size:
+            fig, ax = plt.subplots(figsize=self.figsize)
+            scatter = ax.scatter(data[:, 0], data[:, 1], c=labels, cmap="tab10", s=45, alpha=0.75)
+            if centroids.size:
+                ax.scatter(
+                    centroids[:, 0],
+                    centroids[:, 1],
+                    c="black",
+                    marker="X",
+                    s=160,
+                    label="Centroids",
+                )
+            ax.set_xlabel("Feature 1", fontsize=12)
+            ax.set_ylabel("Feature 2", fontsize=12)
+            ax.set_title("Clustering Result", fontsize=15, fontweight="bold")
+            ax.grid(alpha=0.3)
+            ax.legend()
+            plt.colorbar(scatter, ax=ax, label="Cluster")
+
+            filepath = output_dir / "clustering_result.png"
+            fig.tight_layout()
+            fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
+            plt.close(fig)
+            files.append(filepath)
+
+        stats = solution.get("statistics", {})
+        if stats:
+            metric_keys = [key for key in ["sse", "n_clusters"] if key in stats]
+            if metric_keys:
+                fig, ax = plt.subplots(figsize=(7, 4.5))
+                metric_values = [float(stats[key]) for key in metric_keys]
+                ax.bar(metric_keys, metric_values, color=plt.cm.Greens(np.linspace(0.45, 0.85, len(metric_keys))))
+                ax.set_title("Clustering Metrics", fontsize=14, fontweight="bold")
+                ax.grid(axis="y", alpha=0.3)
+
+                filepath = output_dir / "clustering_metrics.png"
+                fig.tight_layout()
+                fig.savefig(filepath, dpi=self.dpi, bbox_inches="tight")
+                plt.close(fig)
+                files.append(filepath)
 
         return files
 
