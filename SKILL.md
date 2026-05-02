@@ -1,126 +1,107 @@
 ---
 name: papercarator
 description: >
-  Math-modeling paper generator. Two modes: (A) YOU write the paper using math data
-  from scripts, or (B) one-command auto via external LLM. Use when user wants a
-  math-modeling paper with equations, charts, and PDF output. Supports 16 model types:
-  optimization, equations, ODE/PDE, queueing, Markov, Bayesian, statistics, network flow,
-  graph theory, time-series, game theory, control theory, clustering, multi-objective,
-  fuzzy logic. NOT for: literature-review-only, open-domain research, industrial CAD.
+  Academic paper generation skill. Supports thesis, journal, conference, review,
+  experiment, case study, and math modeling papers. Two modes: (A) YOU write using
+  math/stat data from scripts, or (B) one-command auto via external LLM. Features:
+  16 math models, 7 paper types, 5 citation formats, statistical analysis, charts,
+  PDF generation. NOT for: industrial CAD.
 ---
 
-# PaperCarator — Math-Modeling Paper Skill
+# PaperCarator — Academic Paper Skill
 
-## Prerequisites (one-time setup)
+## Prerequisites
 
 ```bash
-cd <papercarator-root>
-pip install -e ".[dev]"
+cd <papercarator-root> && pip install -e ".[dev]"
 ```
-
 Requires: Python 3.10+, xelatex (MiKTeX or TeX Live).
+
+## Paper Types (7)
+
+| ID | Name | Pages | Language | Use Case |
+|----|------|-------|----------|----------|
+| thesis | 毕业论文 | 30-100 | zh | 本科/硕士/博士 |
+| journal | 期刊论文 | 6-15 | en | SCI/EI/核心期刊 |
+| conference | 会议论文 | 4-8 | en | 学术会议 |
+| review | 综述论文 | 10-30 | zh | 文献综述/系统综述 |
+| experiment | 实验论文 | 8-20 | en | 实验研究 |
+| case_study | 案例研究 | 6-15 | zh | 案例分析/调研 |
+| math_modeling | 数学建模 | 15-30 | zh | 建模竞赛/研究 |
+
+## Citation Formats (5)
+
+gbt7714 (中国国标) | apa (APA 7th) | ieee | chicago | mla
 
 ## Mode Selection
 
-| Situation | Mode | Why |
-|-----------|------|-----|
-| User wants quality paper, you have context | **A** | You write with your own intelligence |
-| User says "快速/一键/自动生成" | **B** | One command, external LLM writes |
-| You're short on context tokens | **B** | Don't have room for 6 sections |
-| User provides CSV/Excel data file | **A** | Better data integration |
+| Situation | Mode |
+|-----------|------|
+| Quality paper, you have context | **A** |
+| User says "快速/一键" | **B** |
+| Short on context tokens | **B** |
 
-**Default: Mode A.** Only use B if user explicitly asks for speed.
+## Mode A — YOU Write (3 Steps)
 
----
-
-## Mode A — YOU Write the Paper
-
-### Step 1: Generate math data
-
+**Step 1** — Generate data:
 ```bash
 cd <papercarator-root>
-python3 scripts/generate_data.py "基于排队论的医院门诊流程优化研究" --output ./output/my_paper
+python3 scripts/generate_data.py "TOPIC" --output ./output/my_paper
 ```
+Output: context.json with model type, equations, solution values, charts, literature, paper type.
 
-This outputs JSON to stdout. Save it. Key fields you will use:
-
+**Step 2** — Write sections as JSON:
 ```json
 {
-  "topic": "基于排队论的医院门诊流程优化研究",
-  "plan": {"paper_type": "queueing", "keywords": ["排队", "优化"], "difficulty": "medium"},
-  "model": {"name": "M/M/c 排队系统模型", "type": "queueing", "parameters": {"arrival_rate": 4.5}},
-  "solution": {"values": {"rho": 0.7031, "Lq": 1.375, "Wq": 0.3056}, "statistics": {...}},
-  "charts": ["./output/my_paper/visualizations/charts/queue_curve.png", ...],
-  "algorithm": "\\begin{algorithm}[H]\\caption{M/M/c 排队系统稳态分析}...",
-  "literature": [{"title": "...", "authors": "...", "year": "2024", "doi": "..."}]
+  "abstract": "200-500字，引用具体数值",
+  "introduction": "研究背景+问题+贡献",
+  "related_work": "文献综述，引用literature字段",
+  "methodology": "方法描述，LaTeX公式",
+  "experiments": "实验设置",
+  "results": "结果分析，引用solution.values",
+  "conclusion": "结论+局限性",
+  "references": "\\bibitem{ref1} Author. Title. Journal, Year."
 }
 ```
 
-### Step 2: YOU write 6 sections
-
-Save as `sections.json` in the output directory. Structure:
-
-```json
-{
-  "abstract": "200-300字。引用 solution.values 中的具体数字。",
-  "introduction": "400-600字。研究背景+问题提出+本文工作。",
-  "related_work": "400-600字。按方法分类综述，引用 literature 字段。",
-  "methodology": "500-800字。问题形式化+模型构建+求解策略。必须有LaTeX公式。",
-  "experiments": "200-400字。实验目标+设置+评价指标。",
-  "results": "400-600字。引用具体数值，分析物理含义。",
-  "conclusion": "200-300字。主要结论+局限性+未来方向。",
-  "references": "\\bibitem{ref1} Author. Title. Journal, Year.\n\\bibitem{ref2} ..."
-}
+**Step 3** — Assemble PDF:
+```bash
+python3 scripts/assemble_paper.py --context context.json --sections sections.json
 ```
 
-**Writing rules:**
-- Use REAL numbers: "ρ=0.7031" not "求解成功"
-- Cite from `literature` field: "Green (2006) 分析了急诊排队系统..."
-- LaTeX math: inline `$x$`, display `$$\sum_{i=1}^{n}$$`
-- Related work: categorize by method, discuss pros/cons
-- Results: interpret numbers physically ("利用率70.3%表明系统负载适中")
-
-### Step 3: Assemble PDF
+## Mode B — One Command
 
 ```bash
-python3 scripts/assemble_paper.py \
-  --context ./output/my_paper/context.json \
-  --sections ./output/my_paper/sections.json \
-  --template custom
+python3 scripts/run_paper.py "TOPIC" --output ./output/auto_paper
 ```
 
-Output: `./output/my_paper/paper/paper.pdf`
+## Statistical Analysis
 
----
-
-## Mode B — One-Command Auto
-
-```bash
-cd <papercarator-root>
-python3 scripts/run_paper.py "基于贝叶斯推断的药物疗效评估研究" --output ./output/auto_paper
+For experiment/thesis papers with data:
+```python
+from papercarator.statistical_analysis import StatisticalAnalyzer
+sa = StatisticalAnalyzer()
+stats = sa.descriptive_stats(data)        # 描述统计
+t = sa.t_test(group1, group2)             # t检验
+r = sa.correlation(x, y)                  # 相关分析
+reg = sa.regression(x, y)                 # 回归分析
+anova = sa.anova(group1, group2, group3)  # 方差分析
+chi = sa.chi_square(observed)             # 卡方检验
+latex = sa.to_latex_table(stats)          # 转LaTeX表格
 ```
 
-Options:
-- `--data data.csv` — import real data
-- `--template ieee` — IEEE format (custom/ieee/acm/cjm/springer_lncs/thesis)
-- Requires: `HIAPI_API_KEY` or `OPENAI_API_KEY` in environment for LLM writing
+## Supported Math Models (16)
 
-Output: JSON summary with `success`, `pdf`, `quality_score`, `charts`, `suggestions`.
+equation_system | optimization | multi_objective | differential | pde |
+queueing | markov_chain | bayesian | statistical | network_flow |
+time_series | game_theory | control_theory | clustering | graph_theory | fuzzy_logic
 
----
+## Templates
 
-## Supported Models (16)
-
-equation_system, optimization, multi_objective, differential, pde, queueing,
-markov_chain, bayesian, statistical, network_flow, time_series, game_theory,
-control_theory, clustering, graph_theory, fuzzy_logic
+custom | ieee | acm | cjm | springer_lncs | thesis
 
 ## Verification
 
-After generating, run:
 ```bash
 python3 scripts/quick_check.py ./output/my_paper
 ```
-
-Checks: structure (9 sections), references (≥5), figures, captions, PDF existence.
-Output: `PASS` / `WARN` / `FAIL` with scores.
