@@ -111,11 +111,48 @@ def generate(topic: str, output_dir: str = None, data_file: str = None) -> dict:
     searcher = LiteratureSearcher()
     papers = searcher.search(topic + " " + model.model_type, limit=5)
 
+    # 7. Statistical analysis (if numeric data available)
+    from papercarator.statistical_analysis import StatisticalAnalyzer
+    stat_analyzer = StatisticalAnalyzer()
+    stat_results = {}
+
+    # Extract numeric data from solution for analysis
+    numeric_values = {k: v for k, v in solution.values.items() if isinstance(v, (int, float))}
+    if numeric_values:
+        values_list = list(numeric_values.values())
+        stat_results["descriptive"] = stat_analyzer.descriptive_stats(values_list)
+
+    # If imported data has numeric columns, run regression/correlation
+    if imported_data:
+        numeric_cols = imported_data.get("numeric_columns", [])
+        if len(numeric_cols) >= 2:
+            col1, col2 = numeric_cols[0], numeric_cols[1]
+            idx1 = imported_data["columns"].index(col1)
+            idx2 = imported_data["columns"].index(col2)
+            x_vals = [row[idx1] for row in imported_data["data"]
+                      if row[idx1] is not None and row[idx2] is not None]
+            y_vals = [row[idx2] for row in imported_data["data"]
+                      if row[idx1] is not None and row[idx2] is not None]
+            if len(x_vals) >= 3:
+                try:
+                    stat_results["regression"] = stat_analyzer.regression(x_vals, y_vals)
+                    stat_results["correlation"] = stat_analyzer.correlation(x_vals, y_vals)
+                except Exception:
+                    pass
+
     elapsed = time.time() - start
 
     # Build output
     result = {
         "topic": topic,
+        "paper_type": paper_type,
+        "paper_type_info": {
+            "name": type_info["name"],
+            "sections": [s[0] for s in type_info["sections"]],
+            "citation_format": type_info["citation_format"],
+            "language": type_info["language"],
+            "min_pages": type_info["min_pages"],
+        },
         "plan": {
             "paper_type": plan.get("paper_type"),
             "keywords": plan.get("keywords", []),
@@ -141,6 +178,7 @@ def generate(topic: str, output_dir: str = None, data_file: str = None) -> dict:
                           for k, v in solution.statistics.items()
                           if not isinstance(v, dict)},
         },
+        "statistical_analysis": stat_results,
         "charts": all_charts,
         "algorithm": algorithm_code,
         "literature": papers,
