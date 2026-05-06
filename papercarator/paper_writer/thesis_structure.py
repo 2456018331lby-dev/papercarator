@@ -66,16 +66,13 @@ class ThesisStructure:
 \\begin{{titlepage}}
     \\centering
     \\vspace*{{2cm}}
-    \\begin{{\\zihao{{1}}\\heiti}}
-    {institution}\\\\[1cm]
-    \\end{{}}
-    \\begin{{\\zihao{{2}}\\heiti}}
-    {degree}学位论文\\\\[1.5cm]
-    \\end{{}}
-    \\begin{{\\zihao{{-2}}\\heiti}}
-    {title}\\\\[2cm]
-    \\end{{}}
-    \\begin{{\\zihao{{4}}}}
+    {{\\zihao{{1}}\\heiti {institution}\\par}}
+    \\vspace{{1cm}}
+    {{\\zihao{{2}}\\heiti {degree}学位论文\\par}}
+    \\vspace{{1.5cm}}
+    {{\\zihao{{-2}}\\heiti {title}\\par}}
+    \\vspace{{2cm}}
+    {{\\zihao{{4}}
     \\begin{{tabular}}{{rl}}
     学院：& {college} \\\\[0.3cm]
     专业：& {major} \\\\[0.3cm]
@@ -84,7 +81,7 @@ class ThesisStructure:
     指导教师：& {advisor} \\\\[0.3cm]
     日期：& {date} \\\\
     \\end{{tabular}}
-    \\end{{}}
+    \\par}}
 \\end{{titlepage}}
 """
 

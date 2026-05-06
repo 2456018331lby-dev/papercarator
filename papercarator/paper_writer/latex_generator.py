@@ -261,7 +261,7 @@ class LaTeXGenerator:
                 "acknowledgements": sections.get("acknowledgements",
                     "感谢导师的悉心指导和同学们的热心帮助。"),
             }
-            return thesis.generate_full_structure(**thesis_params)
+            return thesis.generate_full_structure(thesis_params)
 
         # Non-thesis: use template + paper-type-aware section routing
         template_name = plan.get("template", "custom")
