@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "papercarator"
-version = "0.2.0"
+version = "0.3.0"
 description = "全自动论文创作系统 - 从题目到成稿的端到端自动化"
 readme = "README.md"
 license = {text = "MIT"}
