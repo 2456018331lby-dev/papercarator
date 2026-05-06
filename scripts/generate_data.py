@@ -51,12 +51,13 @@ def generate(topic: str, output_dir: str = None, data_file: str = None) -> dict:
     model = builder.build(topic, plan)
 
     # Import external data if provided
+    imported_data = None
     if data_file:
         from papercarator.data_importer import DataImporter
         importer = DataImporter()
         try:
-            imported = importer.load(data_file)
-            params = importer.to_model_params(imported, model.model_type)
+            imported_data = importer.load(data_file)
+            params = importer.to_model_params(imported_data, model.model_type)
             if params:
                 model.parameters.update(params)
         except Exception as e:
@@ -141,6 +142,11 @@ def generate(topic: str, output_dir: str = None, data_file: str = None) -> dict:
                     pass
 
     elapsed = time.time() - start
+
+    # Detect paper type
+    from papercarator.paper_writer.paper_types import PaperType
+    paper_type = PaperType.detect_type(topic)
+    type_info = PaperType.get_type(paper_type)
 
     # Build output
     result = {

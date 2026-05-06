@@ -20,71 +20,72 @@ except ImportError:
 from scripts.run_paper import run
 
 
-def generate_paper(topic, template, output_dir):
+def generate_paper(topic, template, output_dir, data_file, paper_type_hint):
     """Gradio回调：生成论文。"""
     if not topic.strip():
         return "请输入题目", None, None
 
     output_dir = output_dir.strip() or None
+    data_file = data_file.strip() or None
+    paper_type_hint = paper_type_hint.strip() or None
 
     try:
-        result = run(topic, output_dir, template)
+        result = run(topic, output_dir, template, data_file, paper_type_hint)
 
         if not result.get("success"):
             return f"生成失败: {result.get('error')}", None, None
 
-        # Format summary
         summary_lines = [
-            f"=== 论文生成完成 ===",
+            "=== 论文生成完成 ===",
             f"题目: {result['topic']}",
-            f"模型类型: {result['model_type']}",
+            f"论文类型: {result.get('paper_type_name', result['paper_type'])}",
+            f"模型类型: {result['model_name']} ({result['model_type']})",
             f"关键词: {', '.join(result['keywords'])}",
-            f"难度: {result['difficulty']}",
             f"质量评分: {result['quality_score']}/100",
-            f"求解状态: {'成功' if result['solution_success'] else '失败'}",
-            f"求解信息: {result['solution_message']}",
             f"图表数量: {result['chart_count']}",
-            f"算法伪代码: {'是' if result['has_algorithm'] else '否'}",
             f"耗时: {result['elapsed_seconds']}秒",
             f"输出目录: {result['output_dir']}",
         ]
         if result.get("suggestions"):
-            summary_lines.append("")
-            summary_lines.append("改进建议:")
-            for s in result["suggestions"]:
-                summary_lines.append(f"  - {s}")
-
-        summary = "\n".join(summary_lines)
+            summary_lines.extend(["", "改进建议:"] +
+                [f"  - {s}" for s in result["suggestions"]])
 
         pdf_path = result.get("pdf")
         tex_path = result.get("tex")
-
-        return summary, pdf_path, tex_path
+        return "\n".join(summary_lines), pdf_path, tex_path
 
     except Exception as e:
         return f"异常: {str(e)}", None, None
 
 
-def analyze_topic(topic):
+def analyze_topic(topic, paper_type_hint):
     """Gradio回调：仅分析题目。"""
     if not topic.strip():
         return "请输入题目"
 
     try:
-        import sys
-        sys.path.insert(0, str(Path(__file__).parent))
         from papercarator.planner import TopicAnalyzer
+        from papercarator.paper_writer.paper_types import PaperType
+
         analyzer = TopicAnalyzer()
         result = analyzer.analyze(topic)
 
+        paper_type = PaperType.detect_type(topic, paper_type_hint or None)
+        type_info = PaperType.get_type(paper_type)
+
         lines = [
-            f"论文类型: {result['paper_type']}",
+            f"论文类型: {type_info['name']} ({paper_type})",
+            f"引用格式: {type_info['citation_format']}",
+            f"语言: {'中文' if type_info['language'] == 'zh' else 'English'}",
+            f"建议页数: {type_info['min_pages']}+",
             f"难度: {result['difficulty']}",
             f"应用领域: {result['application_domain']}",
             f"关键词: {', '.join(result['keywords'])}",
             f"研究方法: {', '.join(result['research_methods'])}",
             f"数学工具: {', '.join(result['required_math_tools'])}",
-            f"可视化: {', '.join(result['required_visualizations'])}",
+            "",
+            "章节结构:",
+            *[f"  - {title}" for _, title in type_info["sections"]],
         ]
         return "\n".join(lines)
     except Exception as e:
@@ -92,9 +93,10 @@ def analyze_topic(topic):
 
 
 # Build UI
-with gr.Blocks(title="PaperCarator - 数学建模论文生成器", theme=gr.themes.Soft()) as app:
-    gr.Markdown("# PaperCarator - 数学建模论文生成器")
-    gr.Markdown("输入题目，一键生成包含数学建模、图表、算法伪代码的完整学术论文。")
+with gr.Blocks(title="PaperCarator v0.3 — 学术论文生成器",
+               theme=gr.themes.Soft()) as app:
+    gr.Markdown("# PaperCarator v0.3")
+    gr.Markdown("支持7种论文类型、16种数学模型、5种引用格式的端到端论文生成。")
 
     with gr.Tab("一键生成"):
         with gr.Row():
@@ -106,14 +108,22 @@ with gr.Blocks(title="PaperCarator - 数学建模论文生成器", theme=gr.them
                 )
                 with gr.Row():
                     template_select = gr.Dropdown(
-                        choices=["custom", "ieee", "acm", "cjm", "springer_lncs", "thesis"],
-                        value="custom",
-                        label="论文模板",
+                        choices=["custom", "ieee", "acm", "springer_lncs", "cjm"],
+                        value="custom", label="LaTeX模板",
                     )
-                    output_input = gr.Textbox(
-                        label="输出目录（可选）",
-                        placeholder="留空自动创建",
+                    type_select = gr.Dropdown(
+                        choices=["", "thesis", "journal", "conference",
+                                  "review", "experiment", "case_study", "math_modeling"],
+                        value="", label="论文类型（可选，自动检测）",
                     )
+                data_input = gr.Textbox(
+                    label="数据文件（可选，CSV/Excel/JSON）",
+                    placeholder="留空使用合成数据",
+                )
+                output_input = gr.Textbox(
+                    label="输出目录（可选）",
+                    placeholder="留空自动创建 ./output/<题目>/",
+                )
                 generate_btn = gr.Button("生成论文", variant="primary", size="lg")
 
             with gr.Column(scale=3):
@@ -124,7 +134,7 @@ with gr.Blocks(title="PaperCarator - 数学建模论文生成器", theme=gr.them
 
         generate_btn.click(
             generate_paper,
-            inputs=[topic_input, template_select, output_input],
+            inputs=[topic_input, template_select, output_input, data_input, type_select],
             outputs=[summary_output, pdf_file, tex_file],
         )
 
@@ -134,31 +144,42 @@ with gr.Blocks(title="PaperCarator - 数学建模论文生成器", theme=gr.them
             placeholder="输入题目进行分析，查看模型类型、关键词等",
             lines=2,
         )
+        analyze_type = gr.Dropdown(
+            choices=["", "thesis", "journal", "conference",
+                      "review", "experiment", "case_study", "math_modeling"],
+            value="", label="指定类型（可选）",
+        )
         analyze_btn = gr.Button("分析")
-        analyze_output = gr.Textbox(label="分析结果", lines=10, interactive=False)
-        analyze_btn.click(analyze_topic, inputs=analyze_input, outputs=analyze_output)
+        analyze_output = gr.Textbox(label="分析结果", lines=14, interactive=False)
+        analyze_btn.click(
+            analyze_topic,
+            inputs=[analyze_input, analyze_type],
+            outputs=analyze_output)
 
-    with gr.Tab("支持的模型"):
+    with gr.Tab("能力概览"):
         gr.Markdown("""
-        | 类型 | 说明 |
-        |------|------|
-        | equation_system | 方程组 |
-        | optimization | 优化问题 |
-        | multi_objective | 多目标优化 |
-        | differential | 微分方程 |
-        | pde | 偏微分方程 |
-        | queueing | 排队系统 |
-        | markov_chain | 马尔可夫链 |
-        | bayesian | 贝叶斯推断 |
-        | statistical | 统计回归 |
-        | network_flow | 网络流 |
-        | graph_theory | 图论 |
-        | time_series | 时间序列 |
-        | game_theory | 博弈论 |
-        | control_theory | 控制理论 |
-        | clustering | 聚类分析 |
-        | fuzzy_logic | 模糊逻辑 |
-        """)
+### 论文类型 (7)
+| ID | 名称 | 页数 | 引用格式 |
+|----|------|------|----------|
+| thesis | 毕业论文 | 30-100 | GB/T 7714 |
+| journal | 期刊论文 | 6-15 | APA |
+| conference | 会议论文 | 4-8 | IEEE |
+| review | 综述论文 | 10-30 | APA |
+| experiment | 实验论文 | 8-20 | APA |
+| case_study | 案例研究 | 6-15 | APA |
+| math_modeling | 数学建模 | 15-30 | GB/T 7714 |
+
+### 数学模型 (16)
+equation_system, optimization, multi_objective, differential, pde,
+queueing, markov_chain, bayesian, statistical, network_flow,
+time_series, game_theory, control_theory, clustering, graph_theory, fuzzy_logic
+
+### 统计分析
+描述统计, t检验 (Cohen's d), Pearson相关, 线性回归, ANOVA, 卡方检验, LaTeX表格输出
+
+### 引用格式 (5)
+GB/T 7714 | APA | IEEE | Chicago | MLA
+""")
 
 
 if __name__ == "__main__":
