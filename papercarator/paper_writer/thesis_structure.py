@@ -162,7 +162,11 @@ class ThesisStructure:
             ("结论与展望", "（待填写）"),
         ])
 
-        for ch_title, ch_content in chapters:
+        for item in chapters:
+            if isinstance(item, dict):
+                ch_title, ch_content = item["title"], item["content"]
+            else:
+                ch_title, ch_content = item
             parts.append(f"\\chapter{{{ch_title}}}\n{ch_content}\n")
 
         parts.append("""
