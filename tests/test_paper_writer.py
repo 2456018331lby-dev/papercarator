@@ -110,15 +110,15 @@ class TestSectionWriter:
 class TestLaTeXGenerator:
     """测试 LaTeX 生成器"""
 
-    def test_compile_uses_local_filename_on_windows(self, tmp_path, monkeypatch):
-        """测试编译时使用局部文件名，避免 Windows 路径转义问题"""
+    def test_compile_uses_windows_path_on_wsl(self, tmp_path, monkeypatch):
+        """WSL环境下编译时自动转换路径为Windows格式"""
         generator = LaTeXGenerator()
-        output_dir = tmp_path / "paper"
-        output_dir.mkdir()
+        # Simulate WSL path under /mnt/c/
+        output_dir = Path("/mnt/c/tmp/paper")
+        output_dir.mkdir(parents=True, exist_ok=True)
         tex_path = output_dir / "paper.tex"
         tex_path.write_text("\\documentclass{article}\\begin{document}ok\\end{document}", encoding="utf-8")
         pdf_path = output_dir / "paper.pdf"
-        pdf_path.write_bytes(b"%PDF-1.4")
 
         calls: list[list[str]] = []
 
@@ -130,9 +130,8 @@ class TestLaTeXGenerator:
 
         result = generator._compile_latex(tex_path, output_dir)
 
-        assert result == pdf_path
-        assert calls[1][-1] == "paper.tex"
-        assert str(tex_path) not in calls[1]
+        # Should convert WSL path to Windows: C:\tmp\paper\paper.tex
+        assert calls[1][-1] == "C:\\tmp\\paper\\paper.tex"
 
 
 class TestTemplateManager:

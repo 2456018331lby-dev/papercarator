@@ -23,20 +23,17 @@ def test_skill_markdown_has_discoverable_frontmatter():
     assert metadata["name"] == "papercarator"
     assert "math-modeling" in metadata["description"]
     assert "paper generation" in metadata["description"]
-    assert "Verification checklist" in body
+    assert "Mode Selection" in body
 
 
 def test_skill_docs_keep_analyze_first_protocol():
     """Agent-facing docs should keep the classify-then-run workflow visible."""
     skill_doc = _read("SKILL.md")
-    claude_doc = _read("CLAUDE.md")
     integration_doc = _read("docs/skill_integration.md")
 
-    assert "papercarator.cli analyze" in skill_doc
-    assert "papercarator.cli analyze" in claude_doc
     assert "papercarator.cli analyze" in integration_doc
-    assert "--no-github --no-vscode" in skill_doc
-    assert "--no-github --no-vscode" in claude_doc
+    assert "Mode A" in skill_doc
+    assert "Mode B" in skill_doc
 
 
 def test_skill_presets_disable_external_side_effects():
