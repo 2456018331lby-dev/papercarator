@@ -1,64 +1,55 @@
 # PaperCarator for Claude Code
 
-## What this repo is
+## What this is
 
-PaperCarator is a math-modeling paper generation pipeline.
+PaperCarator is an AI-driven academic paper generation pipeline. Claude Code should use it as:
 
-Claude Code should treat it as:
-- a structured modeling-and-writing toolchain
-- not a general-purpose autonomous research system
+- A **two-mode paper generator**: (A) Claude writes using math data, or (B) one-command auto
+- Supporting **7 paper types**: thesis, journal, conference, review, experiment, case study, math_modeling
+- With **16 mathematical models**, statistical analysis, literature search, and concept diagrams
 
-## Safe usage pattern
+## Recommended Usage
 
-Prefer topics that map cleanly to:
-- optimization / multi-objective optimization
-- equation systems
-- ODE / PDE
-- queueing systems
-- Markov chains
-- statistical regression
-- network flow / shortest path
-- time-series forecasting
-- game theory / Nash equilibrium
-- control theory / PID stability
-- clustering / K-means analysis
-
-## Recommended command
-
-If topic fit is uncertain, classify first:
+**Default: Mode A — Claude writes the paper**
 
 ```bash
-python3.12 -m papercarator.cli analyze "<topic>"
+# Step 1: Generate math data + charts + statistics
+cd <papercarator-root>
+python3 scripts/generate_data.py "TOPIC" --output ./output/my_paper
+
+# Step 2: Read the JSON output. Write sections as LaTeX.
+# Save as sections.json in the output directory.
+
+# Step 3: Assemble into PDF
+python3 scripts/assemble_paper.py --context context.json --sections sections.json
 ```
 
-Continue only when the reported `paper_type` is one of the supported math-model families, or explicitly describe the modeling approximation being made.
+**Fast mode: Mode B — one command auto**
 
 ```bash
-python3.12 -m papercarator.cli run "<topic>" --output <target_dir> --no-github --no-vscode
+python3 scripts/run_paper.py "TOPIC" --output ./output/auto_paper
 ```
 
-If using a config preset:
+Requires HIAPI_API_KEY in env for LLM writing.
+
+## What to Verify
+
+After generating:
+- `paper/paper.pdf` exists and renders correctly
+- All sections have substantive content (not template filler)
+- Figures have descriptive Chinese captions
+- References are real publications (5+ entries)
+- Keywords are topic-specific, not generic
+
+## Quality Check
 
 ```bash
-python3.12 -m papercarator.cli --config configs/skill_claude.yaml run "<topic>" --output <target_dir> --no-github --no-vscode
+python3 scripts/quick_check.py ./output/my_paper
 ```
 
-## What Claude Code should verify
+## Boundaries
 
-After running, check:
-- `paper/paper.pdf` exists
-- `paper/paper.tex` exists
-- at least one chart exists
-- at least one 3D visualization exists when the topic calls for it
-- generated sections discuss the selected model family rather than a generic paper outline
-
-## Known boundary
-
-Claude Code should not present outputs from this repo as publication-ready academic truth without extra review.
-
-The generated paper is best treated as:
-- a strong structured first draft
-- a math-modeling report artifact
-- a demonstration of a model-selection and generation pipeline
-
-If the topic is primarily a literature review, open-domain research question, or citation-heavy academic paper, do not claim full support. Ask for a mathematical modeling angle or run only a clearly labeled approximation.
+- Best as a **structured first draft**, not publication-ready final manuscript
+- Requires real data for statistical rigor (use `--data data.csv`)
+- Not suitable for: pure literature reviews without methodology, experimental papers without real data, industrial CAD design
+- Mode B external LLM quality varies; Mode A (Claude writing) gives better results

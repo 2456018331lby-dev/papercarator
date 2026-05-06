@@ -1,137 +1,59 @@
-# PaperCarator - 数学建模论文一体化 Skill
+# PaperCarator — AI 学术论文生成 Skill
 
-PaperCarator 当前更准确的定位是：
-
-一个供上层 AI 使用的、面向**数学建模类题目**的端到端 skill。
-
-它已经能够把题目分析、基础数学建模、二维/三维可视化、LaTeX 论文生成串成一条可验证链路。
-它不是“任意开放域题目都能全自动完成研究与写作”的通用研究代理。
-
-## 当前能力
-
-- **题目分析**：识别关键词、研究方法、应用领域和适合的建模类型
-- **数学建模**：当前内置支持
-  - 方程组
-  - 优化问题
-  - 多目标优化
-  - 微分方程
-  - 偏微分方程（热方程风格）
-  - 排队系统
-  - 马尔可夫链
-  - 统计回归
-  - 网络流 / 最短路径
-  - 时间序列预测
-  - 博弈论 / 纳什均衡
-  - 控制理论 / PID 稳定性
-  - 聚类分析 / K-means
-- **结果求解与验证**：自动调用 SymPy / SciPy 完成求解并输出结果摘要
-- **可视化生成**：自动生成二维图表和数学型三维示意
-- **论文输出**：自动生成摘要、方法、实验、结果、结论，并编译 LaTeX/PDF
-- **CLI / Web 演示**：支持命令行和 Gradio 页面验证完整流程
-
-## 当前边界
-
-下面这些能力，当前版本**还不能诚实宣称已经做到**：
-
-- 不能保证“随便一个题目”都能自动建模并写出可信论文
-- 不能替代真实文献检索、学术综述和开放域研究设计
-- 不能替代工业级 CAD / Solid modeling / 任意复杂 3D 建模
-- 不能在没有扩展模型库的前提下覆盖高复杂度跨学科题目
-
-换句话说：它现在更适合做“数学建模自动化骨架 skill”，而不是“通用科研全自动体”。
-
-## 技术栈
-
-- **核心语言**: Python 3.10+
-- **数学建模**: SymPy, NumPy, SciPy, Pyomo
-- **3D建模**: Blender Python API, trimesh, matplotlib-3d
-- **论文生成**: LaTeX, Jinja2, pylatex
-- **配置管理**: Pydantic
-- **CLI**: Click / Typer
+一站式学术论文生成系统。支持 7 种论文类型、16 种数学模型、统计分析、文献检索、AI 自主写作。从题目到 PDF，两种模式任选。
 
 ## 快速开始
 
 ```bash
-# 安装依赖
-python3.12 -m pip install -e ".[dev]"
+cd <project-dir>
+pip install -e ".[dev]"
 
-# 运行示例脚本
-python3.12 examples/basic_usage.py
+# Mode A: AI 自主写作（推荐）
+python3 scripts/generate_data.py "基于排队论的医院门诊流程优化研究" --output ./output/my_paper
+# → 读 context.json → AI 写章节 → 保存 sections.json
+python3 scripts/assemble_paper.py --context context.json --sections sections.json
 
-# 运行 CLI
-python3.12 -m papercarator.cli run "基于优化理论的资源配置问题研究"
-
-# 查看帮助
-python3.12 -m papercarator.cli --help
+# Mode B: 一键自动
+python3 scripts/run_paper.py "基于贝叶斯推断的药物疗效评估研究" --output ./output/auto_paper
 ```
 
-说明：
+## 核心能力
 
-- 当前推荐入口是 `python3.12 -m papercarator.cli`
-- `python3.12 -m papercarator` 目前不是可执行入口
-- Windows 终端下已做过 `gbk` 兼容修复，避免 `rich` 的 emoji / spinner 直接崩溃
+| 功能 | 说明 |
+|------|------|
+| 论文类型 | 毕业论文 / 期刊 / 会议 / 综述 / 实验 / 案例 / 数学建模 |
+| 数学模型 | 16 种（优化、方程组、ODE/PDE、排队、马尔可夫、贝叶斯、统计、网络流、图论、时间序列、博弈论、控制理论、聚类、多目标、模糊逻辑） |
+| 引用格式 | GB/T 7714 / APA / IEEE / Chicago / MLA |
+| 统计分析 | 描述统计、t检验、相关分析、回归分析、ANOVA、卡方检验 |
+| 文献检索 | Semantic Scholar + CrossRef 真实文献抓取 |
+| 概念图 | 纯 matplotlib 生成专业示意图（8 种模型类型，无需 GPU） |
+| 质量评分 | 7 维度 0-100 分自动评分 |
+| 模板 | ieee / acm / cjm / springer_lncs / thesis |
+| 输出格式 | LaTeX + PDF + JSON 摘要 |
+| Web UI | Gradio 交互界面 |
 
-## 已验证状态
+## 论文类型详情
 
-- 最新全量测试已通过
-- `examples/basic_usage.py` 可跑通
-- `python3.12 -m papercarator.cli run ...` 可在 Windows 终端跑通
-- PDF 可生成
-- 论文写作模块已改为**按模型类型生成内容**，不再所有题目都套同一份优化叙事
-- 当前测试基线：`93/93` 通过
-- 已完成真实 demo 输出：
-  - 输出目录：`C:\Users\24560\Desktop\study\paperskilldemo`
-  - 示例题目：`多服务台排队系统性能分析与等待时间优化研究`
-  - 已生成：PDF、LaTeX、队列演化图、排队指标图、3D 排队系统示意
+| 类型 | 语言 | 页数 | 章节数 | 适用场景 |
+|------|------|------|--------|----------|
+| thesis | 中文 | 30-100 | 8 | 本科/硕士/博士毕业论文 |
+| journal | 英文 | 6-15 | 6 | SCI/EI 期刊论文 |
+| conference | 英文 | 4-8 | 6 | 学术会议论文 |
+| review | 中文 | 10-30 | 7 | 文献综述/系统综述 |
+| experiment | 英文 | 8-20 | 6 | 实验研究论文 |
+| case_study | 中文 | 6-15 | 7 | 案例分析/调研 |
+| math_modeling | 中文 | 15-30 | 8 | 数学建模竞赛/研究 |
 
-## Skill Assets
+## 环境要求
 
-For downstream agent invocation, the repo now includes:
+- Python 3.10+
+- xelatex (MiKTeX 或 TeX Live)
+- Mode B 需要 HIAPI_API_KEY 或 OPENAI_API_KEY
 
-- [SKILL.md](/C:/Users/24560/Desktop/study/opendemo/papercarator/SKILL.md)
-- [CLAUDE.md](/C:/Users/24560/Desktop/study/opendemo/papercarator/CLAUDE.md)
-- [docs/skill_integration.md](/C:/Users/24560/Desktop/study/opendemo/papercarator/docs/skill_integration.md)
-- [configs/skill_codex.yaml](/C:/Users/24560/Desktop/study/opendemo/papercarator/configs/skill_codex.yaml)
-- [configs/skill_claude.yaml](/C:/Users/24560/Desktop/study/opendemo/papercarator/configs/skill_claude.yaml)
+## 文档
 
-Recommended agent flow:
-
-1. Use `python3.12 -m papercarator.cli analyze "<topic>"` when topic fit is uncertain.
-2. Run `python3.12 -m papercarator.cli run "<topic>" --output <target_dir> --no-github --no-vscode`.
-3. Verify `paper.tex`, `paper.pdf`, charts, and any expected 3D visualization.
-4. If the topic is review/open-domain/citation-heavy, label the output as a modeling approximation instead of publication-ready research.
-
-## 后续方向
-
-### A. 数学建模专用能力继续做深
-
-- 增加更多模型类型
-- 扩展题目到模型的路由规则
-- 提高结果到章节内容的贴合度
-- 明确二维图表与三维示意的输出规范
-
-### B. 更广泛题目类型扩展
-
-- 更强的开放域题目理解
-- 文献检索与引用管理
-- 更多专业建模器与专业求解器
-- 更明确的工程 3D / CAD 集成边界
-
-## 项目结构
-
-```
-papercarator/
-├── papercarator/          # 主包
-│   ├── planner/           # 题目分析与规划
-│   ├── math_modeling/     # 数学建模
-│   ├── visualization/     # 可视化与3D建模
-│   ├── paper_writer/      # 论文写作
-│   └── github_publisher/  # GitHub发布
-├── configs/               # 配置文件
-├── tests/                 # 测试
-├── docs/                  # 文档
-└── examples/              # 示例
-```
+- [HANDOVER.md](HANDOVER.md) — 完整维护文档
+- [NEXT_AI_PROMPT.md](NEXT_AI_PROMPT.md) — 下一个 AI 的提示词
 
 ## 许可证
 

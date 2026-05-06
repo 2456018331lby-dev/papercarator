@@ -1,118 +1,49 @@
-# 下一个AI的提示词
-
-## 你的任务
-
-继续完成 PaperCarator 项目。当前它已经更接近“数学建模论文一体化 skill”，基础流程、CLI 和 PDF 输出已跑通，下一步重点是继续把数学建模专用能力做深，再逐步准备更广泛题目类型的扩展。
+# 下一个 AI 的提示词
 
 ## 项目位置
-```
+
 C:\Users\24560\Desktop\study\opendemo\papercarator
+
+## 当前能力（2026-05-02）
+
+PaperCarator 已是全类型学术论文生成系统：
+
+- **7 种论文类型**：毕业论文/期刊/会议/综述/实验/案例/数学建模
+- **16 种数学模型**：全部有构建器+求解器
+- **5 种引用格式**：GB/T 714/APA/IEEE/Chicago/MLA
+- **统计分析**：描述统计/t检验/相关/回归/ANOVA/卡方
+- **文献检索**：Semantic Scholar + CrossRef
+- **概念图**：纯 matplotlib，8 种模型类型
+- **两种模式**：A) AI 自主写作 B) 一键自动
+
+## 使用方式
+
+**Mode A（推荐）**：
+```
+python scripts/generate_data.py "题目" --output ./output/xxx
+→ 读 JSON 写章节 → 保存 sections.json
+→ python scripts/assemble_paper.py --context context.json --sections sections.json
 ```
 
-## 当前状态（阅读HANDOVER.md了解详情）
-
-### ✅ 已完成
-- Pipeline架构完整（Planner → MathModeling → Visualization → PaperWriter）
-- section_writer.py 已修复f-string语法错误
-- Gradio Web界面已创建（app.py）
-- 数学建模和求解器工作正常（Python/SciPy）
-- Windows 下 LaTeX 编译可生成 PDF
-- 题目分析器已修复混合关键词优先级问题
-- `section_writer.py` 已改成按模型类型写作
-- `python3.12 -m papercarator.cli run ...` 已验证可在 Windows 终端跑通
-- CLI 已修复 `gbk` 终端下 emoji / spinner 崩溃
-- 已新增 `network_flow` 和 `time_series` 模型链路
-- 已新增 `multi_objective` 和 `pde` 模型链路
-- 已新增 `queueing` 和 `markov_chain` 模型链路
-- 已补齐 `game_theory`、`control_theory`、`clustering` 的分析入口、写作画像、图表生成和回归测试
-- 已补齐 `SKILL.md`、`CLAUDE.md`、`docs/skill_integration.md`
-- 已补齐 `configs/skill_codex.yaml`、`configs/skill_claude.yaml`
-- `SKILL.md` 已补齐 Codex skill frontmatter，并新增 analyze-first、降级模式和产物验收协议
-- 已新增 `tests/test_skill_assets.py`，锁定 skill frontmatter、调用协议和本地化预设
-- 当前最新测试基线为 `93/93` 通过
-- 已验证 demo 输出目录：`C:\Users\24560\Desktop\study\paperskilldemo`
-
-### ⚠️ 需要修复（按优先级）
-
-#### P1 - 功能增强
-1. **数学建模专用能力继续增强**
-   - 增加更多模型类型（例如多目标优化、PDE、随机过程、图论扩展）
-   - 扩展题目到模型的匹配规则
-   - 提升章节内容与真实求解结果之间的贴合度
-
-2. **Direction B 的准备工作**
-   - 明确哪些题目还不属于当前 skill 的稳定覆盖范围
-   - 整理开放域题目支持所需的能力缺口
-   - 继续维护 README / HANDOVER / CHANGELOG，保证后续接手不被旧状态误导
-
-#### P2 - 可选
-3. **MATLAB Engine** - 未安装（可选，Python求解器已足够）
-   - 位置：`C:\Program Files\MATLAB\R2024b`
-   - 需要检查`extern/engines/python`目录是否存在
-
-## 立即执行
-
-1. **阅读文档**：
-   ```
-   C:\Users\24560\Desktop\study\opendemo\papercarator\HANDOVER.md
-   C:\Users\24560\Desktop\study\opendemo\papercarator\QUICKFIX.md
-   ```
-
-2. **测试当前状态**：
-   ```bash
-   cd C:\Users\24560\Desktop\study\opendemo\papercarator
-   python3.12 -m pytest tests -v
-   python3.12 examples/basic_usage.py
-   python3.12 -m papercarator.cli run "基于优化理论的资源配置问题研究" --output verify_output --no-github --no-vscode
-   ```
-
-3. **优先继续推进**：
-   - 优先增强数学建模专用能力，不要先做开放域承诺
-   - 对不确定题目先运行 `python3.12 -m papercarator.cli analyze "<topic>"`，再决定是否完整生成
-   - 对 `review`、`experimental`、`theoretical`、泛化 `modeling` 结果明确标注“降级/近似”
-   - 如果继续改论文写作模块，保持“无额外 LLM 依赖”的前提
-   - 每次改动后同步更新 `HANDOVER.md` / `README.md` / `CHANGELOG.md`
-   - 保持 `SKILL.md` / `CLAUDE.md` / `skill_*` 配置与真实能力一致
-   - 当前工作树里 `papercarator/math_modeling/` 和 `papercarator/visualization/chart_generator.py` 已有未提交修改，继续维护时避免无意覆盖
-
-## 当前重点示例（题目分析优先级）
-
-```python
-# 真实回归场景
-result = analyzer.analyze("基于优化理论的资源配置问题研究")
-assert result["paper_type"] == "optimization"
+**Mode B**：
 ```
+python scripts/run_paper.py "题目" --output ./output/xxx
+```
+
+## 继续改进的方向
+
+1. **内容深度** — 论文质量取决于写作 AI 本身。Mode A 下 Claude/GPT 写的内容好于 Mode B 的 MiniMax
+2. **真实数据** — 用户提供 CSV 数据时，统计分析会自动运行。数据质量决定结果可信度
+3. **论文终稿** — 当前是初稿生成器，要发表还需人工审核和补充
+4. **测试回归** — HANDOVER.md 中 93/93 的基线可能已变化，新 AI 接手后应重新跑测试
 
 ## 技术栈
-- Python 3.12
-- Pydantic, NumPy, SciPy, SymPy
-- Gradio (Web界面)
-- LaTeX (xelatex)
-- Click, Rich (CLI)
+
+Python 3.12 | SymPy/SciPy/NumPy | Matplotlib | LaTeX (xelatex) | Gradio | Click/Rich
 
 ## 注意事项
-- Windows终端可能显示中文乱码，但文件内容正确
-- 使用python3.12运行（不是python）
-- 测试时使用临时目录，不会污染项目
 
-## 成功标准
-- [x] LaTeX编译PDF成功生成
-- [x] 所有测试通过
-- [x] 示例流程能完整跑通生成论文流程
-- [x] CLI 在 Windows 终端可直接跑通
-- [x] Codex / Claude Code skill 调用资产已具备
-- [x] skill 调用协议已补齐：frontmatter、预分析、降级模式、产物验收
-- [x] `game_theory` / `control_theory` / `clustering` 不再作为 generic `modeling` 降级路径
-- [x] 在当前环境重跑全量测试并记录本轮最新基线：`93/93`
-- [ ] 数学建模专用能力继续扩展
-- [ ] README / HANDOVER / NEXT_AI_PROMPT 保持与真实状态一致
-
-## 可选增强（如果时间允许）
-- 接入LLM API提升内容质量
-- 添加更多数学模型类型
-- 优化题目分析器精度
-- 实现文献自动检索
-
----
-
-**开始工作前，先安装 `.[dev]` 并运行测试确认当前状态；不要重复处理已经修复的 LaTeX 编译兼容问题。**
+- 读取 HANDOVER.md 了解完整文件结构
+- 不要改动 ~/.hermes/config.yaml（MCP 配置已稳定）
+- GitHub push 需要: unset GIT_EXEC_PATH && export GIT_EXEC_PATH=/usr/lib/git-core
+- xelatex 在 WSL 中自动检测 Windows MiKTeX 路径
