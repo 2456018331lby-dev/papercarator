@@ -274,17 +274,11 @@ class LaTeXGenerator:
         doc += "\\begin{document}\n\n"
         doc += "\\maketitle\n\n"
 
-        # Abstract
+        # Abstract (keywords already included in abstract content from writer)
         if "abstract" in sections:
             doc += "\\begin{abstract}\n"
             doc += sections["abstract"] + "\n"
             doc += "\\end{abstract}\n\n"
-
-        # Keywords
-        keywords = plan.get("keywords", [])
-        if keywords:
-            key_label = "关键词：" if language == "zh" else "Keywords: "
-            doc += f"\\textbf{{{key_label}}}{'; '.join(keywords) if language == 'zh' else ', '.join(keywords)}\n\n"
 
         # Build section routing: canonical name -> sections dict key
         SECTION_ROUTE = {
@@ -314,8 +308,8 @@ class LaTeXGenerator:
             if canonical_name in ("abstract", "keywords", "toc",
                                   "abstract_zh", "abstract_en",
                                   "acknowledgements", "appendix",
-                                  "chapter_1", "chapter_2", "chapter_3",
-                                  "chapter_4", "chapter_5", "chapter_6"):
+                                  "references", "chapter_1", "chapter_2",
+                                  "chapter_3", "chapter_4", "chapter_5", "chapter_6"):
                 continue  # handled separately
 
             section_key = SECTION_ROUTE.get(canonical_name)
@@ -361,8 +355,12 @@ class LaTeXGenerator:
 
     def _get_section_title_for_type(self, canonical: str,
                                     type_info: dict) -> str:
-        """根据论文类型获取章节标题"""
-        return dict(type_info.get("sections", [])).get(canonical, canonical.title())
+        """根据论文类型获取章节标题（sections是(id, title, required)三元组）"""
+        sections = type_info.get("sections", [])
+        for item in sections:
+            if item[0] == canonical:
+                return item[1]
+        return canonical.title()
 
     def _format_stat_results(self, stat_results: dict[str, Any]) -> str:
         """格式化统计分析结果为LaTeX"""
