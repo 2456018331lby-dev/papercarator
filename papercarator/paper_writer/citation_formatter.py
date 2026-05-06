@@ -55,9 +55,9 @@ class CitationFormatter:
 
         entries = []
         for i, paper in enumerate(papers, 1):
+            key = f"ref{i}"
             entry = self.format_citation(paper, fmt)
-            if fmt in ("gbt7714", "ieee"):
-                entry = f"[{i}] {entry}"
+            entry = f"\\bibitem{{{key}}} {entry}"
             entries.append(entry)
         body = "\n\n".join(entries)
         return f"\\begin{{thebibliography}}{{99}}\n{body}\n\\end{{thebibliography}}"
