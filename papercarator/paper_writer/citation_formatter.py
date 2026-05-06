@@ -40,15 +40,27 @@ class CitationFormatter:
         formatter = getattr(self, "_format_" + fmt, self._format_gbt7714)
         return formatter(paper)
 
-    def format_bibliography(self, papers: list[dict], fmt: str = "gbt7714") -> str:
-        """格式化参考文献列表。"""
+    def format_bibliography(self, papers, fmt: str = "gbt7714") -> str:
+        """格式化参考文献列表。
+
+        接受两种输入：
+        - list[dict]: 从文献搜索API返回的论文列表
+        - str: 已经是LaTeX \\bibitem格式的字符串，直接包装
+
+        返回 LaTeX thebibliography 环境内的内容。
+        """
+        if isinstance(papers, str):
+            # 已经是 \\bibitem 格式，包裹在 thebibliography 环境中
+            return f"\\begin{{thebibliography}}{{99}}\n{papers}\n\\end{{thebibliography}}"
+
         entries = []
         for i, paper in enumerate(papers, 1):
             entry = self.format_citation(paper, fmt)
             if fmt in ("gbt7714", "ieee"):
-                entry = "[{}] {}".format(i, entry)
+                entry = f"[{i}] {entry}"
             entries.append(entry)
-        return "\n\n".join(entries)
+        body = "\n\n".join(entries)
+        return f"\\begin{{thebibliography}}{{99}}\n{body}\n\\end{{thebibliography}}"
 
     def _format_gbt7714(self, paper: dict) -> str:
         """GB/T 7714 格式。"""
