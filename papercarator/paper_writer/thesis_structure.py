@@ -169,12 +169,14 @@ class ThesisStructure:
                 ch_title, ch_content = item
             parts.append(f"\\chapter{{{ch_title}}}\n{ch_content}\n")
 
-        parts.append("""
-\\bibliographystyle{plain}
-\\begin{thebibliography}{99}
-\\bibitem{ref1} （待填写参考文献）
-\\end{thebibliography}
-""")
+        # 参考文献 — 通过 CitationFormatter 自动格式化
+        from papercarator.paper_writer.citation_formatter import CitationFormatter
+        formatter = CitationFormatter()
+        refs = config.get("references", "")
+        if refs:
+            parts.append(formatter.format_bibliography(refs, "gbt7714"))
+        else:
+            parts.append("\\begin{thebibliography}{99}\n\\bibitem{ref1} （待填写参考文献）\n\\end{thebibliography}")
 
         parts.append(self.generate_acknowledgements(config.get("acknowledgements", "")))
 
