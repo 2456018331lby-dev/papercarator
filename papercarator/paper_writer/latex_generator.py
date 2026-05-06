@@ -12,6 +12,9 @@ from papercarator.paper_writer.algorithm_writer import AlgorithmWriter
 from papercarator.paper_writer.academic_enhancer import AcademicEnhancer
 from papercarator.paper_writer.quality_scorer import PaperQualityScorer
 from papercarator.paper_writer.llm_writer import LLMWriter
+from papercarator.paper_writer.citation_formatter import CitationFormatter
+from papercarator.paper_writer.paper_types import PaperType
+from papercarator.paper_writer.thesis_structure import ThesisStructure
 
 
 class LaTeXGenerator:
@@ -42,15 +45,30 @@ class LaTeXGenerator:
         if shutil.which(compiler):
             return compiler
 
-        # WSL环境：尝试Windows MiKTeX路径
-        wsl_miktex = "/mnt/c/Users/24560/AppData/Local/Programs/MiKTeX/miktex/bin/x64/xelatex.exe"
+        # WSL环境：自动检测用户名和常见MiKTeX路径
+        import getpass
+        username = getpass.getuser()
+        
+        # Try current user's MiKTeX
+        wsl_miktex = f"/mnt/c/Users/{username}/AppData/Local/Programs/MiKTeX/miktex/bin/x64/xelatex.exe"
         if os.path.exists(wsl_miktex):
             logger.info(f"WSL环境检测到MiKTeX: {wsl_miktex}")
             return wsl_miktex
 
+        # Try any user's MiKTeX (fallback for WSL with different Windows username)
+        try:
+            for user_dir in Path("/mnt/c/Users").iterdir():
+                if user_dir.is_dir():
+                    candidate = user_dir / "AppData/Local/Programs/MiKTeX/miktex/bin/x64/xelatex.exe"
+                    if candidate.exists():
+                        logger.info(f"WSL环境检测到MiKTeX: {candidate}")
+                        return str(candidate)
+        except Exception:
+            pass
+
         # 尝试常见Windows路径
         for path in [
-            r"C:\Users\24560\AppData\Local\Programs\MiKTeX\miktex\bin\x64\xelatex.exe",
+            f"C:\\Users\\{username}\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64\\xelatex.exe",
             r"C:\texlive\2024\bin\win32\xelatex.exe",
         ]:
             wsl_path = "/mnt/" + path[0].lower() + path[2:].replace("\\", "/")
@@ -63,7 +81,8 @@ class LaTeXGenerator:
 
     def generate(self, topic: str, plan: dict[str, Any],
                  math_model: dict[str, Any], solution: dict[str, Any],
-                 visualizations: list[Path], output_dir: Path) -> tuple[dict[str, str], Path | None]:
+                 visualizations: list[Path], output_dir: Path,
+                 stat_results: dict[str, Any] | None = None) -> tuple[dict[str, str], Path | None]:
         """生成完整论文
 
         Args:
@@ -73,6 +92,7 @@ class LaTeXGenerator:
             solution: 求解结果
             visualizations: 可视化文件路径列表
             output_dir: 输出目录
+            stat_results: 统计分析结果（可选）
 
         Returns:
             (章节内容字典, PDF路径或None)
@@ -80,6 +100,9 @@ class LaTeXGenerator:
         logger.info("开始生成论文...")
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Infer paper_type
+        paper_type = plan.get("paper_type", "modeling")
 
         # 1. 生成各章节内容 (LLM优先，规则兜底)
         if self.llm_writer.is_available():
@@ -129,7 +152,7 @@ class LaTeXGenerator:
         sections = self._process_figures(sections, visualizations, output_dir)
 
         # 3. 生成LaTeX文档
-        latex_content = self._generate_latex_document(sections, plan)
+        latex_content = self._generate_latex_document(sections, plan, paper_type, stat_results)
 
         # 4. 保存LaTeX文件
         tex_path = output_dir / "paper.tex"
@@ -205,84 +228,158 @@ class LaTeXGenerator:
         return sections
 
     def _generate_latex_document(self, sections: dict[str, str],
-                                 plan: dict[str, Any]) -> str:
-        """生成完整LaTeX文档"""
-        template_name = plan.get("template", "custom")
-        language = plan.get("language", "zh")
+                                 plan: dict[str, Any],
+                                 paper_type: str = "journal",
+                                 stat_results: dict[str, Any] | None = None) -> str:
+        """生成完整LaTeX文档，根据论文类型使用不同结构和引用格式"""
+        # Resolve paper type
+        paper_type = plan.get("paper_type", paper_type)
+        type_info = PaperType.get_type(paper_type)
+        citation_format = type_info.get("citation_format", "ieee")
+        language = type_info.get("language", "zh")
 
-        # 获取导言区
+        # For thesis type, delegate entirely to ThesisStructure
+        if paper_type == "thesis":
+            thesis = ThesisStructure()
+            thesis_params = {
+                "title": sections.get("title", plan.get("topic", "Untitled")),
+                "author": "PaperCarator Automated System",
+                "institution": plan.get("institution", "某某大学"),
+                "degree": plan.get("degree", "硕士"),
+                "advisor": plan.get("advisor", "导师姓名"),
+                "student_id": plan.get("student_id", "2024000000"),
+                "major": plan.get("major", "专业名称"),
+                "college": plan.get("college", "学院名称"),
+                "abstract_zh": sections.get("abstract", ""),
+                "abstract_en": sections.get("abstract_en",
+                    "This paper presents a study on " + plan.get("topic", "") + "."),
+                "keywords_zh": "；".join(plan.get("keywords", [])),
+                "chapters": self._build_thesis_chapters(sections, stat_results),
+                "acknowledgements": sections.get("acknowledgements",
+                    "感谢导师的悉心指导和同学们的热心帮助。"),
+            }
+            return thesis.generate_full_structure(**thesis_params)
+
+        # Non-thesis: use template + paper-type-aware section routing
+        template_name = plan.get("template", "custom")
         preamble = self.template_manager.get_latex_preamble(template_name, language)
 
-        # 构建文档
         doc = preamble + "\n\n"
-
-        # 标题信息
-        doc += f"\\title{{{sections.get('title', 'Untitled')}}}\n"
+        doc += f"\\title{{{sections.get('title', plan.get('topic', 'Untitled'))}}}\n"
         doc += f"\\author{{PaperCarator Automated System}}\n"
         doc += f"\\date{{\\today}}\n\n"
-
         doc += "\\begin{document}\n\n"
         doc += "\\maketitle\n\n"
 
-        # 摘要
+        # Abstract
         if "abstract" in sections:
             doc += "\\begin{abstract}\n"
             doc += sections["abstract"] + "\n"
             doc += "\\end{abstract}\n\n"
 
-        # 关键词
+        # Keywords
         keywords = plan.get("keywords", [])
         if keywords:
-            doc += f"\\textbf{{Keywords:}} {', '.join(keywords)}\n\n"
+            key_label = "关键词：" if language == "zh" else "Keywords: "
+            doc += f"\\textbf{{{key_label}}}{'; '.join(keywords) if language == 'zh' else ', '.join(keywords)}\n\n"
 
-        # 各章节
-        section_order = [
-            "introduction",
-            "related_work",
-            "methodology",
-            "experiments",
-            "results",
-            "conclusion",
-        ]
+        # Build section routing: canonical name -> sections dict key
+        SECTION_ROUTE = {
+            "introduction": "introduction",
+            "background": "background",
+            "methodology": "methodology", "methods": "methodology",
+            "materials_methods": "methodology",
+            "problem_analysis": "methodology",
+            "model_assumptions": "methodology",
+            "construction": "methodology",
+            "experiments": "experiments",
+            "results": "results", "findings": "results",
+            "solution": "results", "evaluation": "results",
+            "discussion": "discussion",
+            "analysis": "results", "comparison": "results",
+            "taxonomy": "results",
+            "lit_review": "related_work",
+            "case_description": "methodology",
+            "conclusion": "conclusion",
+            "future_work": "future_work",
+            "references": "references",
+        }
 
-        for section in section_order:
-            if section in sections:
-                section_title = self._get_section_title(section, language)
-                doc += f"\\section{{{section_title}}}\n"
-                doc += sections[section] + "\n\n"
+        canonical_sections = [s[0] for s in type_info.get("sections", [])]
 
-        # 参考文献
+        for canonical_name in canonical_sections:
+            if canonical_name in ("abstract", "keywords", "toc",
+                                  "abstract_zh", "abstract_en",
+                                  "acknowledgements", "appendix",
+                                  "chapter_1", "chapter_2", "chapter_3",
+                                  "chapter_4", "chapter_5", "chapter_6"):
+                continue  # handled separately
+
+            section_key = SECTION_ROUTE.get(canonical_name)
+            if section_key and section_key in sections:
+                title = self._get_section_title_for_type(canonical_name, type_info)
+                doc += f"\\section{{{title}}}\n"
+                doc += sections[section_key] + "\n\n"
+
+        # Inject statistical analysis results
+        if stat_results and "results" in sections:
+            doc += self._format_stat_results(stat_results)
+
+        # References with proper citation format
         if "references" in sections:
-            doc += "\\bibliographystyle{plain}\n"
-            doc += "\\begin{thebibliography}{99}\n"
-            doc += sections["references"] + "\n"
-            doc += "\\end{thebibliography}\n\n"
+            formatter = CitationFormatter()
+            refs_text = sections["references"]
+            doc += formatter.format_bibliography(refs_text, citation_format) + "\n\n"
 
         doc += "\\end{document}\n"
-
         return doc
 
-    def _get_section_title(self, section: str, language: str) -> str:
-        """获取章节标题"""
-        titles = {
-            "zh": {
-                "introduction": "引言",
-                "related_work": "相关工作",
-                "methodology": "方法",
-                "experiments": "实验",
-                "results": "结果与分析",
-                "conclusion": "结论",
-            },
-            "en": {
-                "introduction": "Introduction",
-                "related_work": "Related Work",
-                "methodology": "Methodology",
-                "experiments": "Experiments",
-                "results": "Results and Analysis",
-                "conclusion": "Conclusion",
-            },
-        }
-        return titles.get(language, titles["en"]).get(section, section.title())
+    def _build_thesis_chapters(self, sections: dict[str, str],
+                               stat_results: dict[str, Any] | None = None) -> list[dict]:
+        """从sections构建论文章节列表"""
+        chapters = [
+            {"title": "绪论", "content": sections.get("introduction", "介绍研究背景和意义。")},
+            {"title": "相关理论与文献综述",
+             "content": sections.get("related_work", "回顾相关研究。")},
+            {"title": "模型构建与方法",
+             "content": sections.get("methodology", "描述建模方法。")},
+            {"title": "实验与分析",
+             "content": sections.get("results",
+                sections.get("experiments", "实验设计与结果分析。"))},
+            {"title": "讨论与展望",
+             "content": sections.get("discussion",
+                sections.get("conclusion", "总结与展望。"))},
+        ]
+        # Append statistical analysis as a chapter section
+        if stat_results:
+            stat_text = self._format_stat_results(stat_results)
+            chapters[-1]["content"] += "\n\n" + stat_text
+        return chapters
+
+    def _get_section_title_for_type(self, canonical: str,
+                                    type_info: dict) -> str:
+        """根据论文类型获取章节标题"""
+        return dict(type_info.get("sections", [])).get(canonical, canonical.title())
+
+    def _format_stat_results(self, stat_results: dict[str, Any]) -> str:
+        """格式化统计分析结果为LaTeX"""
+        from papercarator.statistical_analysis import StatisticalAnalyzer
+        analyzer = StatisticalAnalyzer()
+        lines = ["\\subsection{统计分析}", ""]
+        if "descriptive" in stat_results:
+            lines.append("\\subsubsection{描述统计}")
+            lines.append(analyzer.to_latex_table(stat_results["descriptive"], "描述统计结果"))
+        if "regression" in stat_results:
+            lines.append("\\subsubsection{回归分析}")
+            lines.append(analyzer.to_latex_table(stat_results["regression"], "回归分析"))
+        if "correlation" in stat_results:
+            lines.append("\\subsubsection{相关性分析}")
+            lines.append(analyzer.to_latex_table(stat_results["correlation"], "相关性分析"))
+        if "t_test" in stat_results:
+            lines.append(analyzer.to_latex_table(stat_results["t_test"], "t检验"))
+        if "anova" in stat_results:
+            lines.append(analyzer.to_latex_table(stat_results["anova"], "方差分析"))
+        return "\n".join(lines)
 
     def _copy_visualizations(self, visualizations: list[Path], output_dir: Path) -> None:
         """复制可视化文件到输出目录"""

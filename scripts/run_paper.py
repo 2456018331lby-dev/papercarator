@@ -103,6 +103,22 @@ def run(topic: str, output_dir: str = None, template: str = "custom",
     except Exception as e:
         return {"success": False, "error": str(e), "topic": topic}
 
+    # Run statistical analysis on pipeline results, then regenerate paper
+    stat_results = _run_statistical_analysis(topic, plan, result)
+    if stat_results:
+        from papercarator.paper_writer.latex_generator import LaTeXGenerator
+        gen = LaTeXGenerator()
+        paper_dir = config.system.output_dir / "paper"
+        model = result.math_model.get("model", {})
+        sol = result.math_model.get("solution", {})
+        viz = result.visualizations
+        sections, new_pdf = gen.generate(
+            topic, plan, model, sol, viz, paper_dir, stat_results
+        )
+        if new_pdf:
+            result.paper_pdf = new_pdf
+            result.paper_content = sections
+
     elapsed = time.time() - start_time
 
     # Gather output info
@@ -228,6 +244,55 @@ def _write_paper(topic, plan, math_model, visualizations, output_dir):
         output_dir=output_dir,
     )
     return sections, pdf_path
+
+
+def _run_statistical_analysis(topic: str, plan: dict,
+                              result) -> dict | None:
+    """Run statistical analysis on pipeline results. Returns stat dict or None."""
+    try:
+        from papercarator.statistical_analysis import StatisticalAnalyzer
+        analyzer = StatisticalAnalyzer()
+        stat_results = {}
+
+        solution = result.math_model.get("solution", {})
+        numeric_vals = {k: v for k, v in solution.get("values", {}).items()
+                        if isinstance(v, (int, float))}
+        if numeric_vals:
+            vals_list = list(numeric_vals.values())
+            if len(vals_list) >= 2:
+                stat_results["descriptive"] = analyzer.descriptive_stats(vals_list)
+
+        # Try t-test with synthetic groups if we have enough values
+        if len(vals_list) >= 6:
+            half = len(vals_list) // 2
+            try:
+                stat_results["t_test"] = analyzer.t_test(
+                    vals_list[:half], vals_list[half:], test_type="independent"
+                )
+            except Exception:
+                pass
+
+        # Add numerical data stats from solution
+        numerical_data = solution.get("numerical_data", {})
+        if numerical_data:
+            for key, arr in numerical_data.items():
+                if isinstance(arr, (list, tuple)) and len(arr) >= 3:
+                    try:
+                        stat_results[f"regression_{key}"] = analyzer.regression(
+                            list(range(len(arr))), list(arr))
+                    except Exception:
+                        pass
+
+        if stat_results:
+            from loguru import logger
+            logger.info(f"统计分析完成: {list(stat_results.keys())}")
+            return stat_results
+
+    except Exception as e:
+        from loguru import logger
+        logger.warning(f"统计分析跳过: {e}")
+
+    return None
 
 
 def main():
